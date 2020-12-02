@@ -45,7 +45,9 @@ seqkit seq -j $ncpu --min-len $min_len --max-len $max_len tmp/"$barcode_db"_raw.
 ```
 
 ### BOLD databases
-for BOLD Databases, the 
+The BOLD Database was downloaded from bold, and the sequences for rbcLA and matK were extracted using the following python jupyter notebook `Processing_BOLD_v2.ipynb`.
+
+Sequences were then further filtered as follow
 ```console
 # BOLD rbcL
 min_len=500
@@ -62,7 +64,7 @@ seqkit seq -j $ncpu --min-len $min_len --max-len $max_len tmp/"$barcode_db"_raw.
 
 ## Common processing
 ### Trimming
-As all databases were all trimmed either with primers or by length, the list of accessions was consequently updated using `update_table_from_list.py`
+As all databases were all trimmed either with primers or by length, the list of accessions was consequently updated using `seqkit` and `update_table_from_list.py`
 ```console
 seqkit fx2tab -j $ncpu -i -n tmp/"$barcode_db"_trim.fasta > tmp/"$barcode_db"_seqID.txt
 wc -l tmp/"$barcode_db"_seqID.txt
@@ -85,4 +87,13 @@ seqtk subseq tmp/"$barcode_db"_trim.fasta tmp/"$barcode_db"_seqID.txt > "$barcod
 seqkit stats -j $ncpu "$barcode_db".fasta
 wc -l "$barcode_db"_TAXO.csv
 seqkit stats -j $ncpu tmp/"$barcode_db"*.fasta
+```
+
+### Converting to blastDB
+```
+for idb in BOLD_pln_matK  BOLD_pln_rbcLa NCBI_pln_trnL NCBI_pln_trnH NCBI_pln_18s NCBI_pln_plastome
+do
+	echo $idb
+	makeblastdb -in $idb.fasta -dbtype nucl -parse_seqids
+done
 ```
