@@ -3,7 +3,7 @@
 
 PAFTOL and 1KP samples were validated through in-silico DNA barcoding.
 
-![image-20201202113052470](C:\Data\PAFTOL\DNA_Barcode_Validation\Blast_&_Validation\image-20201202113052470.png)
+![image-20201202113052470](Blast_&_Validation/image-20201202113052470.png)
 
 
 
@@ -12,6 +12,10 @@ PAFTOL and 1KP samples were validated through in-silico DNA barcoding.
 To improve the testability and accuracy of the validation procedure - due to partial recovery of organellar DNA and uneven coverage across families in reference barcodes - six barcode tests were performed against individual barcode reference databases *that* were built from NCBI nucleotide database (https://www.ncbi.nlm.nih.gov/nuccore) and BOLD (https://www.boldsystems.org/): one for the whole plastome, and the remaining five for particular organellar loci (ribosomal 1 nuclear locus (18s), as well as plastidome loci (rbcL, matk, trnL, and trnH-psbA). Sequences taxonomy was then resolved against WCVP using scientific names. Sequences with unresolved names or that matched duplicate entries with different genera names were discarded.
 
 The creation and curation of barcode databases is described in detail 
+
+[Barcode_Databases/README.md]: Barcode_Databases/README.md	"Barcode_Databases/README.md"
+
+
 
 [here]: Barcode_Databases/README.md	"Barcode_Databases"
 
