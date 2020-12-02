@@ -17,17 +17,19 @@
 - Comparison of sample against collected results
 
 # Dependencies
-	- entrez-direct 
-	- seqkit
-	- cutadapt
-	- blast
-	- python3
-		- Pandas
-		- Numpy
-		- Bio
-		- TQDM
-		- Seaborn
-	
+```python
+- entrez-direct 
+- seqkit
+- cutadapt
+- blast
+- python3
+	- Pandas
+	- Numpy
+	- Bio
+	- TQDM
+	- Seaborn
+```
+
 # Databases
 ## .A NCBI to Barcode DB
 Barcode databases are created from NCBI in 3 steps
