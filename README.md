@@ -1,13 +1,9 @@
 # DNA barcode validation
-[toc]
-
-
+[TOC]
 
 PAFTOL and 1KP samples were validated through in-silico DNA barcoding.
 
-![image-20201202113052470](Blast_&_Validation/image-20201202113052470.png)
-
-
+![image-20201202113052470](Blast_&_Validation/Barcoding_Validation.jpg)
 
 ## Barcode Databases
 
