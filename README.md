@@ -1,22 +1,59 @@
 # DNA barcode validation
-## Creation or recovery of reference databases
-- Create tools to download barcodes from NCBI
-- Script for ecoPCR db creation
-- Annotated taxonomy of database
-- Summary statistics from barcode dbs
+[TOC]
 
-## Barcode recovery from samples
-- Get Organelles script
-- Cutadapt
+PAFTOL and 1KP samples were validated through in-silico DNA barcoding.
 
-## Multi-locus barcoding
-- Script to blast samples against multiple databases
-- Collect results for each blast
+![image-20201202113052470](C:\Data\PAFTOL\DNA_Barcode_Validation\Blast_&_Validation\image-20201202113052470.png)
+
+
+
+## Barcode Databases
+
+To improve the testability and accuracy of the validation procedure - due to partial recovery of organellar DNA and uneven coverage across families in reference barcodes - six barcode tests were performed against individual barcode reference databases *that* were built from NCBI nucleotide database (https://www.ncbi.nlm.nih.gov/nuccore) and BOLD (https://www.boldsystems.org/): one for the whole plastome, and the remaining five for particular organellar loci (ribosomal 1 nuclear locus (18s), as well as plastidome loci (rbcL, matk, trnL, and trnH-psbA). Sequences taxonomy was then resolved against WCVP using scientific names. Sequences with unresolved names or that matched duplicate entries with different genera names were discarded.
+
+The creation and curation of barcode databases is described in detail 
+
+[here]: Barcode_Databases/README.md	"Barcode_Databases"
+
+## Samples
+
+### PAFTOL
+
+For PAFTOL samples, plastomes and ribosomal DNA were recovered from raw reads using GetOrganelles (Jin et al. 2020). In both cases, recommended parameters were used (https://github.com/Kinggerm/GetOrganelle#recipes; i.e. -R 20 -k 21,45,65,85,105 for plastomes, and -R 10 -k 35,85,115 for nuclear ribosomes).
+
+### 1KP
+
+As 353 target genes were also recovered from transcriptomes of the One Thousand Plant Transcriptomes Initiative (Leebens-Mack et al. 2019), we also performed validation by barcoding on the 766 samples recovered. For the validation, we used the same original transcriptome fasta files as in Paftools retrieve_targets. Note that several 1kp samples have already been flagged as contaminated or mislabelled (Carpenter et al. 2019), with a barcode validation against 18s.
+
+
+
+## Taxonomic standardization
+
+Species names in PAFTOL, 1KP and barcode databases were all standardized against the World Checklist of Vascular Plants (https://wcvp.science.kew.org/)  using a custom python script. As such all species reference databases and samples were standardized against the same taxonomy in the validation pipeline.
 
 ## Sample Validation
-- Comparison of sample against collected results
+### 1. Blast
 
-# Dependencies
+Sample sequences were queried against barcode databases using BLASTn (Camacho et al. 2009) if their family was present in the database. BLAST results were further filtered with a minimum identity >95%, minimum length and minimum coverage of reference locus (Table S1). Matching tests could thus only be completed if: 1) the specimens’ family were present in barcode databases, 2) at least one BLAST matches remained after filtering. BLAST matches were then ranked by identity
+
+```shell
+sbatch blast_barcodes_array_v2.sh /mnt/shared/scratch/kleempoe/paftol/org_barcode/OKP/ okp_data_fasta ../Barcode_DB/db_ls.txt
+```
+
+### 2. Test
+
+Up to six tests were thus executed per sample. A sample passed a test if its family ranked first in BLAST matches (ranked by identity), and failed otherwise. 
+
+### 3. Validation
+
+Validation by barcoding was then summarized as follow:  
+
+1. Confirmed: One or more tests confirm the family placement of a sample.
+2. Rejected: More than ½ of the tests confirm the same incorrect family. Requires at least two tests.
+3. Inconclusive otherwise.
+
+## Dependencies
+
 ```python
 - entrez-direct 
 - seqkit
@@ -30,64 +67,3 @@
 	- Seaborn
 ```
 
-# Databases
-## .A NCBI to Barcode DB
-Barcode databases are created from NCBI in 3 steps
-1. Downloading the accessions as a .fasta using a query
-2. Trimming sequences using barcode primers
-3. Create a .fasta database with taxonomic information
-
-
-
-
-# Barcode recovery from samples
-## Recover plastom and ribosomal DNA from raw reads with GetOrganelles
-seqkit stats -j 4 out_fasta_*/*.fasta > PAFTOL_PILOT404_Organelles.stats
-
-
-## Multi-locus barcoding
-```console
-ls okp_data_fasta > okp_data_fasta_list.txt
-sbatch blast_barcodes_array_v2.sh /mnt/shared/scratch/kleempoe/paftol/org_barcode/OKP/ okp_data_fasta ../Barcode_DB/db_ls.txt
-```
-
-# Sample Validation
-## 1. Taxonomic Validation
-With this function, samples are:
-* Validated if the species is within the first N blast matches (N is 1 by default for highest confidence)
-* Invalidated if not within the first N blast matches
-* Untested if the species is not in the database
-* Untested if there are no matches
-
-This validation can be done at any taxonomic level but its goal was first to validate a species.
-Providing a minimum identity is recommended
-
-## 2. Multi-rank Validation
-With this function, samples are:
-* Validated if the lowest taxonomic rank is within the first N blast matches (N is 1 by default)
-* Invalidated if not within the first X blast matches. It will not be tested at higher taxonomic ranks.
-* If the taxonomic rank is not in the database, the test is repeated at the next taxonomic rank (species, genus and family by default)
-* Untested if the highest rank is not in the DB
-* Untested if there are no matches
-
- 1 - Best Hit, Rigorous
-Sample is valid if it matches the best hit at given taxonomic level, provided it exist in the database at that taxonomic level. If it fails at the lowest taxonomic rank, it is not tested at higher taxonomic ranks. 
-
-
-## 3. Validation by Minimum Identity
-With this function, samples are:
-* Validated if the taxa is in the blast matches, regarless of its ranking
-* Invalidated if there is no match at all
-* Untested if the taxa is not in the database
-* Untested if no sequences passed filtering
-
-This validation is useful to detect contaminated samples, for species absent from databases, and to overcome biases of the procedure (see below).
-This test is usually performed at genus and family level. 
-Providing a minimum identity is recommended.
-
-
-## Possible reasons for test failure that are not biological or lab errors:
-* Many sequences in reference databases are mislabelled, particularly at species level (up to 20% according to studies)
-* Longer sequence match has a higher bitscore
-* Shorter sequence match has a higher identity
-* Heteroplasmy
