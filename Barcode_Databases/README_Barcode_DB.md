@@ -1,10 +1,11 @@
 # DNA Barcode Validation - Barcode Databases
 
 ## Barcode recovery and specific processing
-For NCBI queries, the script `ncbi_query_genbank_download.sh` downloads an NCBI database in genbank format and converts it to a fasta file and an list of accessions containing Accession ID, organism name and taxonomic ID.
+For NCBI queries, the script `ncbi_query_genbank_download.sh` downloads an NCBI database in genbank format using entrez-direct and converts it to a fasta file and an list of accessions containing Accession ID, organism name and taxonomic ID.
 
 ### NCBI queries and trimming for 18s, trnH-psbA and trnL
-```console
+Queries were performed on 29/10/2020
+```
 # 18s
 sbatch ncbi_query_genbank_download.sh $my_dir '"18S ribosomal RNA"[All Fields] AND plants[filter] AND ("1500"[SLEN] : "2000"[SLEN])' NCBI_pln_18s
 
@@ -38,20 +39,21 @@ cutadapt -a $PriF...$PriRRev --revcomp -j $ncpu \
 ```
 
 ### Whole Plastomes NCBI
-```console
+Whole plastomes were recovered and concatenated in a single file from https://ftp.ncbi.nlm.nih.gov/refseq/release/plastid/*genomic.gbff.gz (accessed on 29/10/2020)
+Then further processed as follows:
+```
 min_len=10000
 max_len=250000
 seqkit seq -j $ncpu --min-len $min_len --max-len $max_len tmp/"$barcode_db"_raw.fasta > tmp/"$barcode_db"_trim.fasta
 ```
 
 ### BOLD databases
-The BOLD Database was downloaded from bold, and the sequences for rbcLA and matK were extracted using the following python jupyter notebook `Processing_BOLD_v2.ipynb`.
-
-Sequences were then further filtered as follow
-```console
-# BOLD rbcL
-min_len=500
-max_len=1500
+The BOLD Database was downloaded from bold (accessed on 29/10/2020), and sequences for rbcLa and matK were extracted using the following python jupyter notebook `Processing_BOLD_v2.ipynb`.
+Sequences were then further filtered as follows:
+```
+# BOLD rbcLa
+min_len=450
+max_len=750
 seqkit seq -j $ncpu --min-len $min_len --max-len $max_len tmp/"$barcode_db"_raw.fasta > tmp/"$barcode_db"_trim.fasta
 
 # BOLD matK
@@ -65,7 +67,7 @@ seqkit seq -j $ncpu --min-len $min_len --max-len $max_len tmp/"$barcode_db"_raw.
 ## Common processing
 ### Trimming
 As all databases were all trimmed either with primers or by length, the list of accessions was consequently updated using `seqkit` and `update_table_from_list.py`
-```console
+```
 seqkit fx2tab -j $ncpu -i -n tmp/"$barcode_db"_trim.fasta > tmp/"$barcode_db"_seqID.txt
 wc -l tmp/"$barcode_db"_seqID.txt
 python update_table_from_list.py tmp/"$barcode_db"_seqID.txt tmp/"$barcode_db"_raw_SeqID.csv
@@ -73,10 +75,10 @@ wc -l tmp/"$barcode_db"_raw_SeqID.csv
 ```
 
 ### Taxonomy for database
-Use wcvp_taxo_v03.py script to recover the taxonomy for a given .fasta db. Will write a new fasta file containing only accessions for which a taxonomy was recovered.
-
-```console
-python wcvp_taxo_v03.py wcvp_export.txt tmp/"$barcode_db"_raw_SeqID_update.csv -g
+Use wcvp_taxo_v03.py script to recover the taxonomy for a given .fasta db, and writes a new fasta file containing only accessions for which taxons could be resolved against WCVP. Scientific names in genus sp. format were resolved (option -g), as well as scientific names for which duplicate entries all mapped to the same genus (option -d divert_genusOK).
+WCVP database is http://sftp.kew.org/pub/data-repositories/WCVP/wcvp_v2_jun_2020.zip
+```
+python wcvp_taxo_v03.py wcvp_export.txt tmp/"$barcode_db"_raw_SeqID_update.csv -g -d divert_genusOK
 wc -l tmp/"$barcode_db"_raw_SeqID_update_wcvp.csv
 cp tmp/"$barcode_db"_raw_SeqID_update_wcvp.csv "$barcode_db"_TAXO.csv
 awk -F"," '{print $1}' "$barcode_db"_TAXO.csv > tmp/"$barcode_db"_seqID.txt

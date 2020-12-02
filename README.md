@@ -3,7 +3,6 @@
 - Create tools to download barcodes from NCBI
 - Script for ecoPCR db creation
 - Annotated taxonomy of database
-- Convert to Usearch format
 - Summary statistics from barcode dbs
 
 ## Barcode recovery from samples
