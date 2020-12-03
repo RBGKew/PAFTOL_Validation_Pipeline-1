@@ -78,7 +78,7 @@ wc -l tmp/"$barcode_db"_raw_SeqID.csv
 ```
 
 ### Taxonomy for database
-Use wcvp_taxo_v03.py script to recover the taxonomy for a given .fasta db, and writes a new fasta file containing only accessions for which taxons could be resolved against WCVP. Scientific names in genus sp. format were resolved (option -g), as well as scientific names for which duplicate entries all mapped to the same genus (option -d divert_genusOK).
+Use [WCVP_taxo](../WCVP_Taxo/README.md) script to recover the taxonomy for a given .fasta db, and writes a new fasta file containing only accessions for which taxons could be resolved against WCVP. Scientific names in genus sp. format were resolved (option -g), as well as scientific names for which duplicate entries all mapped to the same genus (option -d divert_genusOK). Sequences with unresolved names or that matched duplicate entries with different genera names were discarded. 
 WCVP database is http://sftp.kew.org/pub/data-repositories/WCVP/wcvp_v2_jun_2020.zip
 ```shell
 python wcvp_taxo_v03.py wcvp_export.txt tmp/"$barcode_db"_raw_SeqID_update.csv -g -d divert_genusOK
