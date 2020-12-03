@@ -13,7 +13,7 @@ Samples were validated at family level through 1) in-silico DNA barcoding, and 2
 # DNA Barcoding
 ## Barcode Databases
 To improve the testability and accuracy of the validation procedure—due to partial recovery of organellar DNA and uneven coverage across families for reference barcodes—six individual barcode reference databases were built from the NCBI nucleotide and BOLD database (https://www.ncbi.nlm.nih.gov/nuccore; https://www.boldsystems.org/, accessed on 29/10/2020): one for the whole plastome, and the remaining five for particular organellar loci (ribosomal 1 nuclear locus (18s), as well as plastidome loci (rbcL, matk, trnL, and trnH-psbA). 
-The creation and curation of barcode databases is described in detail [here](Barcode_Databases/README.md)
+The creation and curation of barcode databases is described in detail [here](Barcode_Databases/)
 
 
 
@@ -26,7 +26,7 @@ As 353 target genes were also recovered from transcriptomes of the One Thousand 
 
 ## Taxonomic standardization
 
-Species names in PAFTOL, 1KP and barcode databases were all standardized against the World Checklist of Vascular Plants (https://wcvp.science.kew.org/)  using a [custom python script](WCVP_Taxo/README.md). As such all species reference databases and samples were standardized against the same taxonomy in the validation pipeline.
+Species names in PAFTOL, 1KP and barcode databases were all standardized against the World Checklist of Vascular Plants (https://wcvp.science.kew.org/)  using a [custom python script](WCVP_Taxo/). As such all species reference databases and samples were standardized against the same taxonomy in the validation pipeline.
 
 ## Sample Validation
 ### 1. Blast
