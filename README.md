@@ -1,5 +1,18 @@
-# Validation Pipeline
-[TOC]
+# PAFTOL Validation Pipeline
+- [DNA Barcoding](#dna-barcoding)
+  * [Barcode Databases](#barcode-databases)
+  * [Samples](#samples)
+    + [PAFTOL](#paftol)
+    + [1KP](#1kp)
+  * [Taxonomic standardization](#taxonomic-standardization)
+  * [Sample Validation](#sample-validation)
+    + [1. Blast](#1-blast)
+    + [2. Test](#2-test)
+    + [3. Validation](#3-validation)
+  * [Dependencies](#dependencies)
+- [Phylogeny Placement](#phylogeny-placement)
+- [Validation decisions](#validation-decisions)
+
 
 Samples were validated at family level through 1) in-silico DNA barcoding, and 2) phylogenetic placement.
 
@@ -31,9 +44,17 @@ Species names in PAFTOL, 1KP and barcode databases were all standardized against
 ## Sample Validation
 ### 1. Blast
 
-Sample sequences were queried against barcode databases using BLASTn (Camacho et al. 2009) if their family was present in the database. BLAST results were further filtered with a minimum identity >95%, minimum length (based on barcode length) and minimum coverage of reference locus >=90%. BLAST matches were then ranked by identity
+Sample sequences were queried against barcode databases using BLASTn (Camacho et al. 2009) if their family was present in the database. BLAST results were further filtered with a minimum identity >95%, minimum length (based on barcode length) and minimum coverage of reference locus >=90%. BLAST matches were then ranked by identity.
 
-ADD TABLE
+**Source**|**Barcode**|**Min. length**|**Min. coverage**
+:-----:|:-----:|:-----:|:-----:
+NCBI|18s|1000|90
+NCBI|plastomes|1000|0
+NCBI|trnH-psbA|200|90
+NCBI|trnL|200|90
+BOLD|matK|300|90
+BOLD|rbcLa|300|90
+
 
 ```shell
 sbatch blast_barcodes_array_v2.sh /mnt/shared/scratch/kleempoe/paftol/org_barcode/OKP/ okp_data_fasta ../Barcode_DB/db_ls.txt
@@ -68,6 +89,7 @@ Validation by barcoding was then summarized as follow:
 
 # Phylogeny Placement
 For each family whose best scoring node had a value > 0.5 (excluding monotypic and singly sampled families), specimens belonging to the family and found under this node were coded as **confirmed**, and specimens belonging to the family but not falling under the node were coded as **rejected**. For families whose best scoring node had a value of <= 0.5, the evidence for the description of all specimens belonging to the family was considered **inconclusive**.
+Script can be accessed [here](Phylogeny_Placement/)
 
-# Validation decisions
+# Validation Decisions
 The outputs of the phylogenetic and barcoding validation were combined to identify specimens for automatic inclusion and exclusion from the final tree, and those where a decision on inclusion/exclusion was subject to expert review (see figure above).
