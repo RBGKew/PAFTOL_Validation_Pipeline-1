@@ -46,20 +46,20 @@ For the first example above, the script will output the following tables:
 ### Pre-processing
 * Load wcvp database. If only text file exist, saving as .pkl.
 * Find column containing scientific names. scientific_name or sci_name (default), Species or Genus + Species otherwise.
-* Search for column with unique IDs. First column in table will be selected. Creates column with unique IDs if it doesn't exist. Will not pick sci_name or Species as ID.
+* Search for column with unique IDs. First column in table will be selected. Creates column with unique IDs otherwise. Will not use sci_name or Species as ID.
 
 ### Initial checks
-* Check if Ini_scinames are written as Genus sp.
+* Check Ini_scinames written as Genus sp.
 * Check if Ini_scinames exist in WCVP
 * Optional. Find similar names if not in WCVP
-* Check if Ini_scinames have duplicate entries
-* Proceed to matching for valid scientific names
+* Identify Ini_scinames having duplicate WCVP entries
+* Proceed matching for valid scientific names
 
 ### Matching & Resolving
 1. Find accepted and unplaced matches.
-2. Resolves synonyms and homotypic synonyms. 
+2. Resolve synonyms and homotypic synonyms. 
 3. Resolve duplicates.
-4. Output tables
+4. Write tables
 
 ## Dependencies
 pandas, tqdm<br>
