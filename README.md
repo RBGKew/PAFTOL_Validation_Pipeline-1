@@ -54,7 +54,10 @@ BOLD|rbcLa|300|90
 
 ```shell
 sbatch blast_barcodes_PAFTOL_array.sh PAFTOL_Samples/ paftol_ls.txt
+python Process_blast.py PAFTOL_Samples paftol_ls.txt
+
 sbatch blast_barcodes_1KP_array.sh OKP/ okp_ls.txt
+python Process_blast.py OKP okp_ls.txt
 ```
 
 ### 2. Test
