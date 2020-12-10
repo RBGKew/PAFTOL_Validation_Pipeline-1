@@ -2,9 +2,12 @@
 
 We queried the NCBI nucleotide database for the following barcoding loci: 18s, trnH-psbA and trnL, and downloaded the resulting file in GenBank format using `Entrez-direct` (Kans 2010). trnL and trnH sequences were trimmed in `Cutadapt` (Martin 2011) using universal barcode primers with 10% mismatch tolerated. For trnH-psbA, we used primers psbAf and trnH2 (Tate and Simpson 2003; Sang, Crawford, and Stuessy 1997), and for trnL, primers trnL-c and trnL-d (Taberlet et al. 2007). All NCBI references were filtered based on length, with a minimum and maximum length set for each barcode. Finally, we added the most recent release of plastid data as a reference database of whole plastomes (https://ftp.ncbi.nlm.nih.gov/refseq/release/plastid/).
 
+Curated list of accessions corresponding to each barcode database are provided as .csv files.
+
 ## Barcode recovery and specific processing
 
 For NCBI queries, the script `ncbi_query_genbank_download.sh` downloads an NCBI database in genbank format using `entrez-direct` and converts it to a fasta file and an list of accessions containing Accession ID, organism name and taxonomic ID.
+
 
 ### NCBI queries and trimming for 18s, trnH-psbA and trnL
 Queries were performed on 29/10/2020
