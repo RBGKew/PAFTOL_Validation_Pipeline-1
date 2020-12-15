@@ -20,7 +20,7 @@
 #   default is to produce summary tree for families
 # well flag is to produce statistics for outliers to well-defined taxa only
 
-# perl labelTree2.pl -tree treefile.nwk [-dup.dup.txt] -root 100000 -good g.txt -alien a.txt -outlier o.txt -specimen s.txt -tree2 new_treefile.nwk [-order] [-well] > output.txt          
+# perl pp.pl -tree treefile.nwk [-dup.dup.txt] -root 100000 -good g.txt -alien a.txt -outlier o.txt -specimen s.txt -tree2 new_treefile.nwk [-order] [-well] > output.txt          
 
 use vars qw($opt_tree
 			$opt_dup
@@ -40,19 +40,21 @@ use Getopt::Long;
 use sort 'stable';
 use strict;
 
-&GetOptions("tree=s", 
-            "dup:s",
-            "root:i",
-            "good=s", 
-            "bad=s", 
-            "alien=s", 
-            "outlier=s",
-            "specimen=s", 
-            "tree2=s", 
-            "order", 
-            "well");
+&GetOptions("tree=s",     # input (unrooted) tree in Newick format
+            "dup:s",      # optional list of nodes to ignore
+            "root:i",     # node to be used to root the tree
+            "good=s",     # list of all specimens not needed for manual review (if running on a pre-tree)
+            "bad=s",      # list of badly resolving higher taxa
+            "alien=s",    # list of all specimens intruding in well-defined families
+            "outlier=s",  # list of all taxa outlying a parent taxa
+            "specimen=s", # list of score for how well each specimen matches to its family
+            "tree2=s",    # file to which a simplified family tree will be written
+            "order",      # specify this to write a simplified order-level tree instead of a family level tree
+            "well");      # specify this and specimens will only be considered outliers to well-defined parents
 
 my %barred;
+
+# filter out a list of accessions to be ignored
 
 if ($opt_dup) {
 	
