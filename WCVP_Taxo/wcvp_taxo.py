@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # 
-# # wcvp_taxo v.03
+# # wcvp_taxo
 # wcvp_taxo is a python3 script for matching and resolving scientific names against the WCVP database (https://wcvp.science.kew.org/)
 # 
 # ## Input
@@ -70,7 +70,7 @@
 # for similarity: difflib, requests, ast<br>
 # numpy, os, argparse, sys
 
-# In[260]:
+# In[1]:
 
 
 import pandas as pd
@@ -84,7 +84,7 @@ import sys
 
 # ## Parameters
 
-# In[261]:
+# In[2]:
 
 
 parser = argparse.ArgumentParser(
@@ -133,22 +133,22 @@ verbose=args.verbose
 status_keep=['Accepted','Unplaced']
 
 
-# In[262]:
+# In[3]:
 
 
 # ## Jupyter Notebook 
-# wcvp_path='wcvp_export.txt'
-# df_path='sample_file.csv'
-# # df_path='../paftol_samples/PAFTOL_DEC_DF.csv'
-# # df_path='../paftol_samples/2020-11-23_paftol_export_tmp.csv'
-# # df_path='../1kp/1kp_768.csv'
+# wcvp_path='wcvp_v3_nov_2020.txt'
+# # df_path='sample_file.csv'
+# df_path='../paftol_samples/Release_DEC_DF.csv'
+# # df_path='../phylotree/Release_1/all_samples_r1.csv'
+# # df_path='../db_plants/2020-12-18_paftol_export.csv'
 # # df_path='../Barcoding/Barcode_DB_OLDv2/NCBI_pln_trnH_taxo.csv'
-# # df_path='../db_plants/public_data/public_sciname_list.csv'
+# # df_path='../Public_Data_Mining/public_sciname_list.csv'
 # resolve_genus=True
-# find_most_similar='similarity_genus'
-# dupl_action='divert_genusOK'
+# find_most_similar='similarity'
+# dupl_action='rank'
 # verbose=False
-# only_changes=False
+# only_changes=True
 # simple_output=False
 # status_keep=['Accepted','Unplaced']
 
@@ -157,7 +157,7 @@ status_keep=['Accepted','Unplaced']
 
 # ### Data processing functions
 
-# In[263]:
+# In[4]:
 
 
 # Load wcvp file and save as pickle for faster loading
@@ -192,7 +192,7 @@ def load_df(df_path):
         sys.exit()
 
 
-# In[264]:
+# In[5]:
 
 
 #Define ID column
@@ -213,7 +213,7 @@ def GetIDcol(df):
     return colID
 
 
-# In[265]:
+# In[6]:
 
 
 #Find which column contains the scientific name to match
@@ -249,9 +249,9 @@ def define_sci_name(smpl_df, verbose=False):
     return smpl_df
 
 
-# ### WCVP relatred functions
+# ### WCVP related functions
 
-# In[266]:
+# In[7]:
 
 
 def get_by_taxon_name(df, wcvp):
@@ -260,7 +260,7 @@ def get_by_taxon_name(df, wcvp):
     return match
 
 
-# In[267]:
+# In[8]:
 
 
 def get_by_kew_id(df, wcvp):
@@ -269,7 +269,7 @@ def get_by_kew_id(df, wcvp):
     return match
 
 
-# In[268]:
+# In[9]:
 
 
 #Find closely matching scientific name using difflib.get_close_matches if scientific name was not found
@@ -298,7 +298,7 @@ def find_sim(sci_name, wcvp, only_from_genus=True):
 # print(find_sim('Scaveola humilis', wcvp, only_from_genus=False))
 
 
-# In[269]:
+# In[10]:
 
 
 #Find closely matching scientific name using kew namematching system
@@ -328,7 +328,7 @@ def kew_namematch(sci_name, verbose=False):
 # print(kew_namematch('Combretum mussaendiflora',verbose=True))
 
 
-# In[270]:
+# In[11]:
 
 
 #Find closely matching scientific name
@@ -354,7 +354,7 @@ def get_sim(df, wcvp, find_most_similar, verbose=False):
     return df
 
 
-# In[271]:
+# In[12]:
 
 
 def get_duplicates_type(df):
@@ -378,11 +378,11 @@ def get_duplicates_type(df):
 
 # ## Main
 
-# In[272]:
+# In[13]:
 
 
 if __name__ == "__main__":
-    print('\n\n##### wcvp_taxo v0.3 ##### \nAuthor:   Kevin Leempoel \nLast update: 2020-11-25\n')
+    print('\n\n##### wcvp_taxo v0.4 ##### \nAuthor:   Kevin Leempoel \nLast update: 2020-12-10\n')
     
     print(wcvp_path, df_path, 'g:', resolve_genus, ' s:', find_most_similar, ' d:', dupl_action,
       ' oc:', only_changes, ' os:', simple_output, ' v:', verbose)
@@ -472,7 +472,9 @@ if __name__ == "__main__":
           'duplicated ID, corresponding to', dupl_df.kew_id.nunique(),'kew_id')
     if dupl_action=='rank':
         # Sort matches by ranked taxonomic status and ID
-        dupl_df['taxo_rank'] = dupl_df['taxonomic_status']            .replace({'Accepted':0, 'Unplaced':1, 'Synonym':2,'Homotypic_Synonym':3,'Artificial Hybrid':4})
+        dupl_df['taxo_rank']=dupl_df.taxonomic_status
+        dupl_df.loc[dupl_df['Ini_taxonomic_status'].isna()==False,'taxo_rank']=                    dupl_df.loc[dupl_df['Ini_taxonomic_status'].isna()==False,'Ini_taxonomic_status']
+        dupl_df['taxo_rank'] = dupl_df['taxo_rank']            .replace({'Accepted':1, 'Unplaced':2, 'Synonym':3,'Homotypic_Synonym':4,'Artificial Hybrid':5})
         dupl_df = dupl_df.sort_values('taxo_rank').drop_duplicates('ID').reset_index().drop(columns=['taxo_rank','index'])
         return_df = pd.concat([return_df,dupl_df])
     else:
@@ -517,7 +519,10 @@ if __name__ == "__main__":
         smpl_df = smpl_df[~smpl_df.ID.isin(unresolved.ID)]
         print(smpl_df.shape)
     # Modify taxonomy for genus sp.
-    mod_gensp=smpl_df[(smpl_df.Genus_sp) | (smpl_df.Duplicate_type=='Same_Genus')].index
+    if dupl_action=='rank':
+        mod_gensp=smpl_df[(smpl_df.Genus_sp)].index
+    else:
+        mod_gensp=smpl_df[(smpl_df.Genus_sp) | (smpl_df.Duplicate_type=='Same_Genus')].index
     smpl_df.loc[mod_gensp,'taxon_name']=smpl_df.loc[mod_gensp,'genus'] + ' sp.'
     smpl_df.loc[mod_gensp,'species']=np.nan
     #Sort table by ID
@@ -553,22 +558,3 @@ if __name__ == "__main__":
         out_df.to_csv(df_path.replace('.csv','_wcvp_changes.csv'),index=False,encoding='utf-8')
         
     print('Done!')
-
-
-# In[273]:
-
-
-out_df
-
-
-# In[274]:
-
-
-out_df.isna().sum()
-
-
-# In[275]:
-
-
-smpl_df
-
