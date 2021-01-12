@@ -28,6 +28,7 @@ Note that for families represented in the tree by a single sample, the validatio
 perl pp.pl -tree treefile.nwk [-dup.dup.txt] -good g.txt -alien a.txt -outlier o.txt -specimen s.txt -tree2 new_treefile.nwk [-root 100000] [-order] [-well] [-help] > output.txt
 ```
 
+
 **Options:**
 
 * tree=s  		Input (unrooted) tree in Newick format
