@@ -27,8 +27,9 @@ use vars qw($opt_tree
             $opt_alien
             $opt_outlier
             $opt_specimen 
+            $opt_stats
+            $opt_bootstrap
             $opt_tree2 
-			$opt_root
             $opt_order
             $opt_well
             $opt_help);
@@ -45,9 +46,10 @@ use strict;
             "bad=s",      
             "alien=s",    
             "outlier=s", 
-            "specimen=s", 
+            "specimen=s",
+            "stats=s",
+            "bootstrap=s",
             "tree2=s", 
-            "root=i",  
             "order",      
             "well",
             "help");      
@@ -59,7 +61,7 @@ my $USAGE =<<USAGE;
 
      Usage:
 
-         perl pp.pl -tree treefile.nwk [-dup.dup.txt] -good g.txt -alien a.txt -outlier o.txt -specimen s.txt -tree2 new_treefile.nwk [-root 100000] [-order] [-well] [-help] > output.txt
+         perl pp.pl -tree treefile.nwk [-dup.dup.txt] -good g.txt -alien a.txt -outlier o.txt -specimen s.txt -stats st.txt -tree2 new_treefile.nwk [-bootstrap bs.txt] [-order] [-well] [-help] > output.txt
 
          where:
                 tree=s  Input (unrooted) tree in Newick format
@@ -69,8 +71,9 @@ my $USAGE =<<USAGE;
                alien=s  List of all specimens intruding in well-defined families
              outlier=s  List of all taxa outlying an ancestral taxon
             specimen=s  List of score for how well each specimen matches to its family
+               stats=s  List of taxonomic coherence scores for labelled nodes and associated bootstrap values
+           bootstrap=s  List of bootstrap values by position in taxonomy
                tree2=s  File to which a simplified (rooted) family-level tree will be written
-                root=i  Node to be used to root the new tree
                  order  Specify this to write a simplified order-level tree instead of a family level tree
                   well  Specify this and specimens will only be considered outliers to well-defined parents
                   help  Prints out this helpful message
@@ -158,6 +161,7 @@ if (my $tree = $treeio->next_tree) {
 		
 		if ($barred{$leafId}) {
 		
+			$leaf -> id($leafId); # update leaf ID so we can ignore these ones later
 			next LEAF;
 		}
 		
@@ -230,11 +234,9 @@ if (my $tree = $treeio->next_tree) {
   			}
   		}
   		
-  		print STDERR $leafId, "\n";
   		print STDERR "Duplicate leaf ID:", $leafId, "\n" if $nodeId2node{$leafId};
   		die if $nodeId2node{$leafId};
-  		$leafId .= 'X' if $nodeId2node{$leafId};
-  		
+  		$leafId .= 'X' if $nodeId2node{$leafId}; 		
   		$maxId = $leafId if $maxId < $leafId;
   		$leaf -> id($leafId); # original metadata gets overwritten by numerical ID
   		$nodeId2node{$leafId} = $leaf;
@@ -251,7 +253,7 @@ if (my $tree = $treeio->next_tree) {
   		push @{${$term2leaf{'ORDER'}}{$order}}, $leaf;
   		my $parent = $leaf -> ancestor;
   		push @parents, $parent;
-  		
+  		  		
   		# each leaf is the "labelled node" for the specimen
   		
   		${$taxon2labelledNodeId{'SPECIMEN'}}{$specimen} = $leafId;
@@ -290,8 +292,7 @@ if (my $tree = $treeio->next_tree) {
       	
   	PARENT: while (scalar @parents > 0) {
   	
-  		my $parent = shift @parents;
-  		
+  		my $parent = shift @parents;		
   		if ($parent -> id ne '') {
   		
   			next PARENT; # node has already been done
@@ -310,13 +311,17 @@ if (my $tree = $treeio->next_tree) {
   		 		}
   			}
   		
-  			$parent -> id($id); # assign an ID for this node
+  			my $text;
+  			
+  			# retain bootstrap information in identifier if requested
+  			
+  			$parent -> id($id); # assign an ID for this node		
   			$nodeId2node{$id} = $parent;
   			
   			# transfer child's data to parent
   			
   			for my $child ($parent -> each_Descendent) {
-  			
+  
   				my $childId = $child -> id;
   				
   				for my $rank (@ranks) {
@@ -424,15 +429,24 @@ if (my $tree = $treeio->next_tree) {
 		}
 	}
 	
-	close OUT;
-		
 	print STDERR "SINGLETONS\n";
 	
-	for my $rank (keys %singleMember) {
+	for my $rank (keys %singletons) {
 	
-		print STDERR $rank, "\t", scalar keys %{$singletons{$rank}}, "\n";
+		print STDERR $rank, "\t", scalar keys %{$singletons{$rank}};
+		print STDERR "\n";
+		
+		if ($rank eq 'ORDER') {
+		
+			for my $taxon (keys %{$singletons{$rank}}) {
+				
+				print STDERR $taxon, "\t";
+			}
+			
+			print STDERR "\n";
+		}
 	}
-	
+
 	# print out summary statistics re monophyly
 	
 	print "\n";
@@ -587,6 +601,10 @@ if (my $tree = $treeio->next_tree) {
 	open (BAD, "> $opt_bad") || die "Could not open $opt_bad\n";
 	print ALIEN "\n";
 	
+	# file for printing taxonomic coherence metric and support values
+	
+	open (STATS, "> $opt_stats") || die "Could not open $opt_stats"; 
+	
 	my %misplaced;
 	my $nn = 0;
 	my %familyScoreCount;
@@ -620,7 +638,7 @@ if (my $tree = $treeio->next_tree) {
 			
 				if (${${$term2score{$rank}}{$term}}{$node} > 
 				    ${${$term2score{$rank}}{$term}}{$nodeId}) {
-				
+					
 					$nodeId = $node;
 					$warning = 0;
 				
@@ -630,7 +648,6 @@ if (my $tree = $treeio->next_tree) {
 			   		if ($node gt $nodeId) {
 				   
 				   		$nodeId = $node;
-				   
 				   	} 
 				   
 				   	$warning = 1;    
@@ -642,12 +659,15 @@ if (my $tree = $treeio->next_tree) {
 			
 			if (($warning == 1) || (${${$term2score{$rank}}{$term}}{$nodeId} <= 0.5)) {
 			
-				print BAD  $rank . "\t". $term;
+				print BAD join "\t", $rank,
+				                     $term, 
+					                 ${${$term2score{$rank}}{$term}}{$nodeId};
 				
 				for my $leaf (@{${$term2leaf{$rank}}{$term}}) {
 			
 					my $leafId = $leaf -> id;
-					print BAD "\t" . $leafId, ":", $leafId2specimen{$leafId};
+					
+					print BAD "\t" . $leafId . ': ' . $leafId2specimen{$leafId};
 				}
 				
 				print BAD "\n";
@@ -680,6 +700,18 @@ if (my $tree = $treeio->next_tree) {
 			
 			push @{${$labelledNodeId2taxon{$rank}}{$nodeId}}, $term;	
 			${$taxon2labelledNodeId{$rank}}{$term} = $nodeId;
+			
+			# if the taxon hasn't mapped onto a leaf node, print out its coherence score
+			# and the bootstrap value of the corresponding node
+			
+			if (! $leafId2specimen{$nodeId}) {
+			
+				print STATS join "\t", $rank, 
+			       				   	   ${${$term2score{$rank}}{$term}}{$nodeId},
+			      				   	   $nodeId2node{$nodeId} -> bootstrap;
+			      				   
+				print STATS "\n";
+			}
 					
 			# define some nodes as well-resolved for the purpose of analysing outliers
 			
@@ -754,6 +786,22 @@ if (my $tree = $treeio->next_tree) {
 	my %rankScore;
 	my %underranked; # list of families nor placed under their orders
 					 # use this later when drawing simplified tree
+					 
+	for my $rank (keys %term2warning) {
+	
+		my %rankCount;
+	
+		for my $term (keys %{$term2warning{$rank}}) {
+		
+			$rankCount{$rank} += scalar @{${$term2leaf{$rank}}{$term}};
+		}
+	
+		print STDERR join "\t", $rank, 
+								scalar keys %{$term2warning{$rank}}, 
+								$rankCount{$rank};
+		
+		print STDERR "\n";
+	}
 		
 	open (OUT, ">$opt_outlier") || die "Could not open $opt_outlier\n";
 	open (GOOD, "> $opt_good") || die "Could not open $opt_good.txt\n";
@@ -948,6 +996,11 @@ if (my $tree = $treeio->next_tree) {
 					$errorKey .= 'O' if $mismatchCount > 0;
 					$errorKey .= 'S' if $singletonCount > 0;
 					
+					if (${$term2warning{$rank}}{$taxon}) {
+					
+						$taxon .= ' !';
+					}
+					
 					print OUT join "\t", $errorKey, 
 										 $rank, 
 										 $taxon, 
@@ -1040,6 +1093,70 @@ if (my $tree = $treeio->next_tree) {
 		} 
 	}
 	
+	## print out node sets (for use in figure)
+	# classes are sub-generic, generic, sub-familial, familial, sub-ordinal, ordinal, 
+	# supra-ordinal
+	
+	my @ranks = ('GENUS', 'FAMILY', 'ORDER');
+	
+	if ($opt_bootstrap) {
+	
+		open (OUT, "> $opt_bootstrap") || die "Could not open $opt_bootstrap";
+		my %recorded;
+		
+		for my $rank (@ranks) {
+	
+			for my $term (keys %{$taxon2labelledNodeId{$rank}}) {
+		
+				my $nodeId = ${$taxon2labelledNodeId{$rank}}{$term};
+			
+				for my $descendantNodeId (keys %{$nodeId2descendantId{$nodeId}}) {
+				
+					#print STDERR $descendantNodeId , "\n";
+			
+					if ((! $leafId2specimen{$descendantNodeId}) && 
+				    	(! $recorded{$descendantNodeId}) &&
+				    	(! $barred{$descendantNodeId})) {
+				    	
+				    	my $score = $nodeId2node{$descendantNodeId} -> bootstrap;
+						print OUT 'SUB-' . $rank, "\t", $score, "\n";
+						$recorded{$descendantNodeId} = 1;
+					}
+				}
+			}	
+		
+			for my $term (keys %{$taxon2labelledNodeId{$rank}}) {
+		
+				my $nodeId = ${$taxon2labelledNodeId{$rank}}{$term};
+			
+				if ((! $leafId2specimen{$nodeId}) && 
+					(! $recorded{$nodeId}) &&
+					(! $barred{$nodeId})) {
+			
+					my $score = $nodeId2node{$nodeId} -> bootstrap;
+					print OUT $rank, "\t", $score, "\n";
+					$recorded{$nodeId} = 1;
+				}
+			}
+		}
+	
+		# supra-ordinal nodes
+	
+		my $root = $tree -> get_root_node;
+		my $rootId = $root -> id;
+	
+		for my $descendantNodeId (keys %{$nodeId2descendantId{$rootId}}) {
+	
+			if ((! $leafId2specimen{$descendantNodeId}) && 
+				(! $recorded{$descendantNodeId}) &&
+				(! $barred{$descendantNodeId})) {
+	 	
+	 			my $score = $nodeId2node{$descendantNodeId} -> bootstrap;
+	 			print OUT "SUPRA-ORDER\t", $score, "\n" if $score ne ''; 		
+	 		}
+		}
+	}
+	
 	## print out a rooted tree containing only families and orders
 	# $opt_order allows families to also be excluded
 	
@@ -1088,6 +1205,8 @@ if (my $tree = $treeio->next_tree) {
 			}
 		
 			$nodeId2text{$nodeId} .= join ',', @texts; 
+			
+			print STDERR $nodeId, "\t", $nodeId2text{$nodeId}, "\n";
 		}
 	}
 	
@@ -1207,43 +1326,44 @@ if (my $tree = $treeio->next_tree) {
 		push @{$reducedTreeReversed{$reducedTree{$nodeId}}}, $nodeId;
 	}
 		
-	## now create a rooted tree
+	## now create a properly rooted tree
 	
-	# first squeeze a new root node between the outlier and its parent
+	# in a tree with non-angiosperm outliers, the root should be inserted between the 
+	# angiosperms and the gymnosperms, and these should only be linked to each other via
+	# the root
 	
 	my %revisedTreeReversed;
-	
-	# setting the root: have hardcoded a default value but this needs to be manually set 
-	# for each tree
-	
-	my $trueRootNodeId;
-	
-	if ($opt_root) {
-	
-		$trueRootNodeId = $opt_root; 
-	
-	} else {
-	
-		$trueRootNodeId = 100000; 
-	}
-	
-	my $outlierParentId = $reducedTree{$outlierNodeId};
-	delete $reducedTree{$outlierNodeId};
+	my $trueRootNodeId = 10000;
+	my $angiospermNodeId = 18703;
+	my $gymnospermNodeId = 18702;
 	my @newList;	
-	push @{$reducedTreeReversed{$trueRootNodeId}}, $outlierNodeId, $outlierParentId;
+	push @{$reducedTreeReversed{$trueRootNodeId}}, $angiospermNodeId, $gymnospermNodeId;
 	
-	# outlier's parent should now be joined to its other child only
+	undef $reducedTree{$angiospermNodeId} 
+		if $reducedTree{$angiospermNodeId} eq $gymnospermNodeId;
+		
+	undef $reducedTree{$gymnospermNodeId} 
+		if $reducedTree{$gymnospermNodeId} eq $angiospermNodeId;
+		
+	my @newAngiospermList;
 	
-	for my $childNodeId (@{$reducedTreeReversed{$outlierParentId}}) {
-		
-		if ($childNodeId ne $outlierNodeId) {
-		
-			push @newList, $childNodeId;
-		}
+	for my $nodeId (@{$reducedTreeReversed{$angiospermNodeId}}) {
+	
+		push @newAngiospermList, $nodeId if $nodeId ne $gymnospermNodeId;
 	}
 	
-	delete $reducedTreeReversed{$outlierParentId};
-	push @{$reducedTreeReversed{$outlierParentId}}, @newList;
+	undef  @{$reducedTreeReversed{$angiospermNodeId}};
+	push @{$reducedTreeReversed{$angiospermNodeId}}, @newAngiospermList;
+	
+	my @newGymnospermList;
+	
+	for my $nodeId (@{$reducedTreeReversed{$gymnospermNodeId}}) {
+	
+		push @newGymnospermList, $nodeId if $nodeId ne $angiospermNodeId;
+	}
+	
+	undef @{$reducedTreeReversed{$gymnospermNodeId}};
+	push @{$reducedTreeReversed{$gymnospermNodeId}}, @newGymnospermList;
 	
 	# now work through the tree starting from the new root
 	# both upwards and downwards relationships wrt the original root are downwards 
@@ -1252,16 +1372,23 @@ if (my $tree = $treeio->next_tree) {
 	my @tips = ($trueRootNodeId);
 	
 	while (scalar @tips > 0) {
-	
+		
 		my $tip = shift @tips;
+		
+		print STDERR "TIP: ", $tip, "\n";
+		
 		my @newTips;
 		
 		if (defined $reducedTreeReversed{$tip}) {
 		
 			push @newTips, @{$reducedTreeReversed{$tip}};
+			
+			print STDERR "Adding from reversed tree ", join " ", @{$reducedTreeReversed{$tip}}, "\n";
 		}
 		
 		push @newTips, $reducedTree{$tip} if $reducedTree{$tip};
+		
+		print STDERR "Adding from tree ", $reducedTree{$tip}, "\n";
 		
 		for my $newTip (@newTips) {
 					
