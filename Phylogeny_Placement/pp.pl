@@ -269,7 +269,7 @@ if (my $tree = $treeio->next_tree) {
   		${${$taxon2ancestor{'SPECIES'}}{$species}}{'ORDER'} = $order;
   		${${$taxon2ancestor{'GENUS'}}{$genus}}{'FAMILY'} = $family;
   		${${$taxon2ancestor{'GENUS'}}{$genus}}{'ORDER'} = $order;
-  		${${$taxon2ancestor{'FAMILY'}}{$family}}{'ORDER'} = $order;
+  		${${$taxon2ancestor{'FAMILY'}}{$family}}{'ORDER'} = $order;  
     }
     
     print STDERR "Accepted node count: ", scalar keys %nodeId2node, "\n";
@@ -299,6 +299,8 @@ if (my $tree = $treeio->next_tree) {
   			
   		} else {
   		
+  		 my $check;
+  		
   			for my $child ($parent -> each_Descendent) {
   		
   		 		if ($child -> id eq '') {
@@ -312,10 +314,13 @@ if (my $tree = $treeio->next_tree) {
   			}
   		
   			my $text;
+  			$parent -> id($id); # assign an ID for this node
   			
-  			# retain bootstrap information in identifier if requested
+  			if ($check == 1) {
   			
-  			$parent -> id($id); # assign an ID for this node		
+  				print STDERR $id , "\n";		
+  			}
+  					
   			$nodeId2node{$id} = $parent;
   			
   			# transfer child's data to parent
@@ -357,9 +362,14 @@ if (my $tree = $treeio->next_tree) {
   			}
   			
   			$id ++;
+  			
+  			if (defined $parent -> ancestor) {
+  			
+  				unshift @parents, $parent -> ancestor;
+  			}
   		}		
   	}
-
+  	 	
   	# print out data per taxonomic term
   	
   	my (%mono, %para, %taxonSize2phylyCount, %nodeCoverageByTaxon, %singleMember);
@@ -374,7 +384,7 @@ if (my $tree = $treeio->next_tree) {
 		
 		TERM: for my $term (sort keys %{$term2leaf{$rank}}) {
 	
-			my @leaves =  @{${$term2leaf{$rank}}{$term}};
+			my @leaves =  @{${$term2leaf{$rank}}{$term}};			
 			my $taxonSize = scalar @leaves; # list of leaf nodes associated with this term
 			
 			# statistics are only meaningful where we have more than 1 leaf per node
@@ -383,6 +393,15 @@ if (my $tree = $treeio->next_tree) {
 								
 				print $rank, "\t", $term, "\t", $taxonSize, "\t";
 				my $lca = $tree->get_lca(-nodes => \@leaves); # find LCA for this term
+				
+				print STDERR $term, "\t", $lca;
+					
+				if ($lca -> id eq '') {
+				
+					# how does this happen?
+					
+					print STDERR "Help!\n";
+				}
 			
 				# how many terms does this node map to?  If 1, that term is monophyletic
 				# print this and store answer by size of LCA
@@ -403,7 +422,7 @@ if (my $tree = $treeio->next_tree) {
 				# what proportion of nodes under the LCA belong to the specified taxon?
 				# 1 if monophyletic
 				# print this and store answer by size of LCA
-				
+								
 				my $nodeCoverageByTaxon = $taxonSize / 
 										  scalar keys %{$nodeId2specimen{$lca -> id}}; 
 				
