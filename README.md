@@ -19,7 +19,7 @@ We implemented two validation steps, which were run in parallel to verify the fa
 * 2) a phylogenetic validation, which checked the placement of each sample at family level in a preliminary tree relative to its expected position. 
 
 
-![QC_pipeline_table](QC_pipeline_table.jpg)
+![Family_Validation](Family_Validation.jpg)
 
 # DNA Barcoding
 ## Barcode Databases
