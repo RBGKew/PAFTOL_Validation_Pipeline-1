@@ -33,10 +33,10 @@
 # 
 # ## Example
 # ```console
-# python wcvp_taxo_v03.py wcvp_export.txt sample_file.csv -g -s similarity_genus -d divert_taxonOK
-# python wcvp_taxo_v03.py wcvp_export.txt sample_file.csv
-# python wcvp_taxo_v03.py wcvp_export.txt sample_file.csv -oc -os -s similarity --verbose -d divert
-# python wcvp_taxo_v03.py wcvp_export.txt sample_file.csv -g -s similarity -d rank --verbose
+# python wcvp_taxo.py wcvp_export.txt sample_file.csv -g -s similarity_genus -d divert_taxonOK
+# python wcvp_taxo.py wcvp_export.txt sample_file.csv
+# python wcvp_taxo.py wcvp_export.txt sample_file.csv -oc -os -s similarity --verbose -d divert
+# python wcvp_taxo.py wcvp_export.txt sample_file.csv -g -s similarity -d rank --verbose
 # ```
 # 
 # ## Output
@@ -84,7 +84,7 @@ import sys
 
 # ## Parameters
 
-# In[2]:
+# In[21]:
 
 
 parser = argparse.ArgumentParser(
@@ -133,22 +133,23 @@ verbose=args.verbose
 status_keep=['Accepted','Unplaced']
 
 
-# In[3]:
+# In[13]:
 
 
 # ## Jupyter Notebook 
 # wcvp_path='wcvp_v3_nov_2020.txt'
 # # df_path='sample_file.csv'
-# df_path='../paftol_samples/Release_DEC_DF.csv'
+# # df_path='../paftol_samples/Release_DEC_DF.csv'
 # # df_path='../phylotree/Release_1/all_samples_r1.csv'
 # # df_path='../db_plants/2020-12-18_paftol_export.csv'
 # # df_path='../Barcoding/Barcode_DB_OLDv2/NCBI_pln_trnH_taxo.csv'
-# # df_path='../Public_Data_Mining/public_sciname_list.csv'
-# resolve_genus=True
+# df_path='../Public_Data/public_sciname_list.csv'
+# # df_path='../paftol_samples/ENA_submission/paftol_notaxid.csv'
+# resolve_genus=False
 # find_most_similar='similarity'
 # dupl_action='rank'
 # verbose=False
-# only_changes=True
+# only_changes=False
 # simple_output=False
 # status_keep=['Accepted','Unplaced']
 
@@ -157,7 +158,7 @@ status_keep=['Accepted','Unplaced']
 
 # ### Data processing functions
 
-# In[4]:
+# In[3]:
 
 
 # Load wcvp file and save as pickle for faster loading
@@ -192,7 +193,7 @@ def load_df(df_path):
         sys.exit()
 
 
-# In[5]:
+# In[4]:
 
 
 #Define ID column
@@ -213,7 +214,7 @@ def GetIDcol(df):
     return colID
 
 
-# In[6]:
+# In[5]:
 
 
 #Find which column contains the scientific name to match
@@ -251,7 +252,7 @@ def define_sci_name(smpl_df, verbose=False):
 
 # ### WCVP related functions
 
-# In[7]:
+# In[6]:
 
 
 def get_by_taxon_name(df, wcvp):
@@ -260,7 +261,7 @@ def get_by_taxon_name(df, wcvp):
     return match
 
 
-# In[8]:
+# In[7]:
 
 
 def get_by_kew_id(df, wcvp):
@@ -269,7 +270,7 @@ def get_by_kew_id(df, wcvp):
     return match
 
 
-# In[9]:
+# In[8]:
 
 
 #Find closely matching scientific name using difflib.get_close_matches if scientific name was not found
@@ -298,7 +299,7 @@ def find_sim(sci_name, wcvp, only_from_genus=True):
 # print(find_sim('Scaveola humilis', wcvp, only_from_genus=False))
 
 
-# In[10]:
+# In[9]:
 
 
 #Find closely matching scientific name using kew namematching system
@@ -328,7 +329,7 @@ def kew_namematch(sci_name, verbose=False):
 # print(kew_namematch('Combretum mussaendiflora',verbose=True))
 
 
-# In[11]:
+# In[10]:
 
 
 #Find closely matching scientific name
@@ -354,7 +355,7 @@ def get_sim(df, wcvp, find_most_similar, verbose=False):
     return df
 
 
-# In[12]:
+# In[11]:
 
 
 def get_duplicates_type(df):
@@ -378,11 +379,11 @@ def get_duplicates_type(df):
 
 # ## Main
 
-# In[13]:
+# In[14]:
 
 
 if __name__ == "__main__":
-    print('\n\n##### wcvp_taxo v0.4 ##### \nAuthor:   Kevin Leempoel \nLast update: 2020-12-10\n')
+    print('\n\n##### wcvp_taxo v0.4 ##### \nAuthor:   Kevin Leempoel \nLast update: 2021-02-18\n')
     
     print(wcvp_path, df_path, 'g:', resolve_genus, ' s:', find_most_similar, ' d:', dupl_action,
       ' oc:', only_changes, ' os:', simple_output, ' v:', verbose)
@@ -414,7 +415,8 @@ if __name__ == "__main__":
     
     # Check if Ini_scinames are written as Genus sp.
     smpl_df['Genus_sp'] = smpl_df['sci_name'].str.split(' ',expand=True)[1].isin(['sp.','sp'])
-    smpl_df.loc[smpl_df.Genus_sp,'sci_name'] = smpl_df.loc[smpl_df.Genus_sp,'sci_name'].str.split(' ',expand=True)[0]
+    if smpl_df.Genus_sp.sum()>0:
+        smpl_df.loc[smpl_df.Genus_sp,'sci_name'] = smpl_df.loc[smpl_df.Genus_sp,'sci_name'].str.split(' ',expand=True)[0]
     if resolve_genus:
         print('Genus sp:',(smpl_df.Genus_sp==True).sum(),'IDs with Genus sp. as sci_name')
     
@@ -558,3 +560,46 @@ if __name__ == "__main__":
         out_df.to_csv(df_path.replace('.csv','_wcvp_changes.csv'),index=False,encoding='utf-8')
         
     print('Done!')
+
+
+# In[33]:
+
+
+smpl_df
+
+
+# In[34]:
+
+
+smpl_df.loc[smpl_df.Genus_sp,'sci_name']
+
+
+# In[35]:
+
+
+smpl_df.Genus_sp
+
+
+# In[36]:
+
+
+smpl_df.loc[smpl_df.Genus_sp,'sci_name'].str.split(' ',expand=True)
+
+
+# In[37]:
+
+
+out_df
+
+
+# In[38]:
+
+
+out_df.isna().sum()
+
+
+# In[39]:
+
+
+smpl_df
+
