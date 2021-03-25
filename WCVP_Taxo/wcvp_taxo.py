@@ -84,7 +84,7 @@ import sys
 
 # ## Parameters
 
-# In[21]:
+# In[2]:
 
 
 parser = argparse.ArgumentParser(
@@ -114,7 +114,10 @@ parser.add_argument("-od", "--output_duplicates",
                     help="Optional. Output a separate file for duplicates as _duplicates.csv", 
                     action="store_true", default=False)
 parser.add_argument("-os", "--simple_output", 
-                    help="Optional. Output file is simplified to 4 columns: ID, kew-id, Ini_sci_name, sci_name", 
+                    help="Optional. Specify which columns of the input file should be kept, in addition to ID, species name \
+                    and WCVP columns kew-id and species name. \
+                    e.g. --simple_output ['idSequencing','NumReads'] will produce an output with \
+                    idSequencing,NumReads, kew-id, Ini_sci_name, sci_name", 
                     action="store_true", default=False)
 parser.add_argument("-v", "--verbose", 
                     help="Optional. verbose output in console", 
@@ -133,24 +136,19 @@ verbose=args.verbose
 status_keep=['Accepted','Unplaced']
 
 
-# In[13]:
+# In[3]:
 
 
 # ## Jupyter Notebook 
-# wcvp_path='wcvp_v3_nov_2020.txt'
-# # df_path='sample_file.csv'
-# # df_path='../paftol_samples/Release_DEC_DF.csv'
-# # df_path='../phylotree/Release_1/all_samples_r1.csv'
-# # df_path='../db_plants/2020-12-18_paftol_export.csv'
-# # df_path='../Barcoding/Barcode_DB_OLDv2/NCBI_pln_trnH_taxo.csv'
-# df_path='../Public_Data/public_sciname_list.csv'
-# # df_path='../paftol_samples/ENA_submission/paftol_notaxid.csv'
-# resolve_genus=False
+# wcvp_path='wcvp_v4_mar_2021.txt'
+# df_path='../PAFTOL_DB/2021-03-19_paftol_export.csv'
+# resolve_genus=True
 # find_most_similar='similarity'
 # dupl_action='rank'
 # verbose=False
-# only_changes=False
-# simple_output=False
+# only_changes=True
+# # simple_output=False
+# simple_output=['idPaftol','idSequencing','ExternalSequenceID','DataSource','Project','Taxonomical_Notes']
 # status_keep=['Accepted','Unplaced']
 
 
@@ -158,7 +156,7 @@ status_keep=['Accepted','Unplaced']
 
 # ### Data processing functions
 
-# In[3]:
+# In[4]:
 
 
 # Load wcvp file and save as pickle for faster loading
@@ -193,7 +191,7 @@ def load_df(df_path):
         sys.exit()
 
 
-# In[4]:
+# In[5]:
 
 
 #Define ID column
@@ -214,7 +212,7 @@ def GetIDcol(df):
     return colID
 
 
-# In[5]:
+# In[6]:
 
 
 #Find which column contains the scientific name to match
@@ -252,7 +250,7 @@ def define_sci_name(smpl_df, verbose=False):
 
 # ### WCVP related functions
 
-# In[6]:
+# In[7]:
 
 
 def get_by_taxon_name(df, wcvp):
@@ -261,7 +259,7 @@ def get_by_taxon_name(df, wcvp):
     return match
 
 
-# In[7]:
+# In[8]:
 
 
 def get_by_kew_id(df, wcvp):
@@ -270,7 +268,7 @@ def get_by_kew_id(df, wcvp):
     return match
 
 
-# In[8]:
+# In[9]:
 
 
 #Find closely matching scientific name using difflib.get_close_matches if scientific name was not found
@@ -299,7 +297,7 @@ def find_sim(sci_name, wcvp, only_from_genus=True):
 # print(find_sim('Scaveola humilis', wcvp, only_from_genus=False))
 
 
-# In[9]:
+# In[10]:
 
 
 #Find closely matching scientific name using kew namematching system
@@ -329,7 +327,7 @@ def kew_namematch(sci_name, verbose=False):
 # print(kew_namematch('Combretum mussaendiflora',verbose=True))
 
 
-# In[10]:
+# In[11]:
 
 
 #Find closely matching scientific name
@@ -355,7 +353,7 @@ def get_sim(df, wcvp, find_most_similar, verbose=False):
     return df
 
 
-# In[11]:
+# In[12]:
 
 
 def get_duplicates_type(df):
@@ -379,11 +377,11 @@ def get_duplicates_type(df):
 
 # ## Main
 
-# In[14]:
+# In[13]:
 
 
 if __name__ == "__main__":
-    print('\n\n##### wcvp_taxo v0.4 ##### \nAuthor:   Kevin Leempoel \nLast update: 2021-02-18\n')
+    print('\n\n##### wcvp_taxo v0.5 ##### \nAuthor:   Kevin Leempoel \nLast update: 2021-03-25\n')
     
     print(wcvp_path, df_path, 'g:', resolve_genus, ' s:', find_most_similar, ' d:', dupl_action,
       ' oc:', only_changes, ' os:', simple_output, ' v:', verbose)
@@ -510,16 +508,16 @@ if __name__ == "__main__":
     ## Cleaning and merging DF
     smpl_df = pd.merge(smpl_df.drop(columns=['InWCVP']),return_df.drop(columns=['Duplicates','sci_name']),how='left',on='ID')
     # Filter duplicates and unresolved taxa
-    print(smpl_df.shape)
-    if dupl_action in dupl_action in ['divert_taxonOK','divert_speciesOK','divert_genusOK']:
+    print('After filtering of duplicates',dupl_action,': kept',smpl_df.shape[0])
+    if dupl_action in ['divert_taxonOK','divert_speciesOK','divert_genusOK']:
         smpl_df = smpl_df[~((smpl_df.Duplicates==True) & (smpl_df.Duplicate_type.isin(keep_dup)==False))]
-        print(smpl_df.shape)
+        print('After',dupl_action,': kept',smpl_df.shape[0],'IDs')
     if find_most_similar in ['similarity_genus','similarity','request_kew']:
         unresolved = smpl_df[smpl_df.Similar_match==False]
-        print(unresolved.shape)
+        print(unresolved.shape[0],'Samples are unresolved, no similar match in WCVP')
         unresolved.to_csv(df_path.replace('.csv','_unresolved.csv'),index=False,encoding='utf-8')
         smpl_df = smpl_df[~smpl_df.ID.isin(unresolved.ID)]
-        print(smpl_df.shape)
+        print('After discarding unresolved: kept',smpl_df.shape[0],'IDs')
     # Modify taxonomy for genus sp.
     if dupl_action=='rank':
         mod_gensp=smpl_df[(smpl_df.Genus_sp)].index
@@ -533,73 +531,37 @@ if __name__ == "__main__":
     
     
     ## Output options
+    # Simple output
+    def output_fn(out_df,simple_output,colID):
+        if simple_output==False:
+            out_df = out_df.drop(columns='ID')
+        elif sum([icol in out_df.columns for icol in simple_output])==len(simple_output):
+            simple_output.extend([colID,'kew_id','Ini_sci_name','sci_name','Duplicate_type'])
+            out_df = out_df[simple_output]
+        else:
+            print('error in simple_output',simple_output,', returning full dataframe')
+        return out_df
+    
     # Output All
     if only_changes==False:
-        if simple_output:
-            out_df = out_df[[colID,'kew_id','Ini_sci_name','sci_name']]
-        else:
-            out_df = out_df.drop(columns='ID')
+        out_df=output_fn(out_df=out_df,simple_output=simple_output,colID=colID)
         out_df.to_csv(df_path.replace('.csv','_wcvp.csv'),index=False,encoding='utf-8')
     # Output changes only    
     elif only_changes:
         out_df['Same_sci_name']=(out_df.Ini_sci_name==out_df.sci_name)
         if 'Ini_Family' in out_df:
             out_df['Same_family']=(out_df.Ini_Family==out_df.family)
-            print(out_df.groupby('Same_family').size())
-            out_df = out_df[(out_df.Same_family==False) | (out_df.Same_sci_name==False)]                    .drop(columns=['Same_sci_name','Same_family'])
+            print('Family match:',out_df.groupby('Same_family').size().to_dict())
+            out_df = out_df[(out_df.Same_family==False) | (out_df.Same_sci_name==False)]                    .drop(columns=['Same_sci_name'])
+            simple_output.extend(['Same_family','Ini_Family','family'])
         else:
             out_df = out_df[(out_df.Same_sci_name==False)].drop(columns='Same_sci_name')
             
-        if simple_output:
-            out_df = out_df[[colID,'kew_id','Ini_sci_name','sci_name']]
-        else:
-            out_df = out_df.drop(columns='ID')
+        out_df=output_fn(out_df=out_df,simple_output=simple_output,colID=colID)
 
         out_df = out_df[(out_df.kew_id.notnull())]
         print('Only_changes:',out_df.shape[0],'IDs have changed taxonomy')
         out_df.to_csv(df_path.replace('.csv','_wcvp_changes.csv'),index=False,encoding='utf-8')
         
     print('Done!')
-
-
-# In[33]:
-
-
-smpl_df
-
-
-# In[34]:
-
-
-smpl_df.loc[smpl_df.Genus_sp,'sci_name']
-
-
-# In[35]:
-
-
-smpl_df.Genus_sp
-
-
-# In[36]:
-
-
-smpl_df.loc[smpl_df.Genus_sp,'sci_name'].str.split(' ',expand=True)
-
-
-# In[37]:
-
-
-out_df
-
-
-# In[38]:
-
-
-out_df.isna().sum()
-
-
-# In[39]:
-
-
-smpl_df
 
