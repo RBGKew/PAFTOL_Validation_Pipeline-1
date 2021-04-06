@@ -70,7 +70,7 @@ seqkit seq -j $ncpu --min-len $min_len --max-len $max_len tmp/"$barcode_db"_raw.
 
 ## Common processing
 ### Trimming
-As all databases were all trimmed either with primers or by length, the list of accessions was consequently updated using `seqkit` and `update_table_from_list.py`
+As all databases were trimmed either with primers or by length, the list of accessions was consequently updated using `seqkit` and `update_table_from_list.py`
 ```shell
 seqkit fx2tab -j $ncpu -i -n tmp/"$barcode_db"_trim.fasta > tmp/"$barcode_db"_seqID.txt
 wc -l tmp/"$barcode_db"_seqID.txt
@@ -81,7 +81,7 @@ wc -l tmp/"$barcode_db"_raw_SeqID.csv
 ### Taxonomy for database
 Using [WCVP_taxo](../WCVP_Taxo/), the taxonomy of accessions was resolved against WCVP and written as a new .fasta file and list of accessions. Scientific names in genus sp. format were resolved (option -g), as well as scientific names for which duplicate entries all mapped to the same genus (option -d divert_genusOK). Sequences with unresolved names or that matched duplicate entries with different genera names were discarded. WCVP database is http://sftp.kew.org/pub/data-repositories/WCVP/wcvp_v2_jun_2020.zip
 ```shell
-python wcvp_taxo_v03.py wcvp_export.txt tmp/"$barcode_db"_raw_SeqID_update.csv -g -d divert_genusOK
+python wcvp_taxo.py wcvp_export.txt tmp/"$barcode_db"_raw_SeqID_update.csv -g -d divert_genusOK
 wc -l tmp/"$barcode_db"_raw_SeqID_update_wcvp.csv
 cp tmp/"$barcode_db"_raw_SeqID_update_wcvp.csv "$barcode_db"_TAXO.csv
 awk -F"," '{print $1}' "$barcode_db"_TAXO.csv > tmp/"$barcode_db"_seqID.txt
