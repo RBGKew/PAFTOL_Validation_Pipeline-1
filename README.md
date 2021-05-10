@@ -13,10 +13,10 @@
 - [Phylogeny Placement](#phylogeny-placement)
 - [Validation decisions](#validation-decisions)
 
-We implemented two validation steps, which were run in parallel to verify the family identification of our processed samples. The two steps consisted of 
+We implemented two validation steps, ran in parallel to verify the family of PAFTOL samples. The two steps are: 
 
-* 1) an *in-silico* DNA barcoding validation, which utilised plastid and nuclear ribosomal data for DNA-based identification.
-* 2) a phylogenetic validation, which checked the placement of each sample at family level in a preliminary tree relative to its expected position. 
+* 1) an *in-silico* DNA barcoding validation, which uses plastid and nuclear ribosomal data for DNA-based identification.
+* 2) a phylogenetic validation, which checks the placement of each sample at family level in a preliminary tree relative to its expected position. 
 
 
 ![Family_Validation](Family_Validation.jpg)
@@ -31,7 +31,7 @@ The creation and curation of barcode databases is described in detail [here](Bar
 For PAFTOL samples, plastomes and ribosomal DNA were recovered from raw reads using `GetOrganelles` (Jin et al. 2020). In both cases, recommended parameters were used (https://github.com/Kinggerm/GetOrganelle#recipes; i.e. -R 20 -k 21,45,65,85,105 for plastomes, and -R 10 -k 35,85,115 for nuclear ribosomes). Our GetOrganelle script is in [PAFTOL_Get_Organelles](PAFTOL_Get_Organelles/)
 
 ### 1KP
-As 353 target genes were also recovered from transcriptomes of the One Thousand Plant Transcriptomes Initiative (Leebens-Mack et al. 2019), we also performed validation by barcoding on the 766 samples recovered. We used the original transcriptome fasta files. 
+As 353 target genes were also recovered from transcriptomes of the One Thousand Plant Transcriptomes Initiative (Leebens-Mack et al. 2019), we also performed validation by barcoding on 766 1KP samples. Here, we used the original transcriptome fasta files. 
 
 ## Taxonomic standardization
 
