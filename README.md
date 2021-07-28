@@ -51,11 +51,8 @@ BOLD|rbcLa||90
 
 
 ```shell
-sbatch blast_barcodes_PAFTOL_array.sh PAFTOL_Samples/ paftol_ls.txt
-python Process_blast.py PAFTOL_Samples paftol_ls.txt
-
-sbatch blast_barcodes_1KP_array.sh OKP/ okp_ls.txt
-python Process_blast.py OKP okp_ls.txt
+sbatch Barcode_Validation.sh 2021-07-05_paftol_export.csv 'OneKP'
+sbatch Barcode_Validation.sh 2021-07-05_paftol_export.csv 'PAFTOL'
 ```
 
 Up to six barcode tests were thus executed per sample. A sample passed an individual test if the first ranked BLAST match (ranked by identity or by bitscore) confirmed its original family identification, and failed otherwise. Note that controls could only be completed if the specimen’s family was present in the barcode databases and if at least one BLAST match remained after filtering. 

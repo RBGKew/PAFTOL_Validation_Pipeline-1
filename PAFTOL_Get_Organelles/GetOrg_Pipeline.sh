@@ -1,19 +1,61 @@
 #!/bin/bash
 module load python/3.7.9
-# Only arguments are DataSource and paftol_export
+
+# Only arguments needed are DataSource and paftol_export
+# e.g: ./GetOrg_Pipeline.sh "GAP" 2021-07-27_paftol_export.csv
 DataSource=$1
 paftol_export=$2
+rem_search="log"
+slurmThrottle=2
 
 
-# Make lists of remaining of samples that have no organelles recovered
-python GetOrg_prep.py --db $paftol_export --DataSource $DataSource
+## Make lists of remaining  samples that have no organelles recovered
+rm -f $DataSource/remaining_pt.txt
+rm -f $DataSource/remaining_nr.txt;
+python GetOrg_prep.py --db $paftol_export --DataSource $DataSource --rem_search $rem_search
 
+
+## Go to dir and create working directories
 cd $DataSource
-mkdir logs; mkdir fasta_pt; mkdir fasta_nr; mkdir fastq_pt; mkdir fastq_nr;
+mkdir -p tmp_fastq_pt; mkdir -p tmp_fastq_nr; mkdir -p GetOrg;
+mkdir -p logs; mkdir -p fasta_pt; mkdir -p fasta_nr; mkdir -p Archives;
 
-# Launch remaining pt
+
+## Copy .fastq.gz files in currrent Data directory
+mkdir -p Data;
+while read iline; do
+	file_path_R1="$(cut -d',' -f2 <<<"$iline")"
+	file_R1=`basename "$file_path_R1"`; file_R1=${file_R1/.gz/}
+	echo $file_R1
+	cp -n $file_path_R1 Data/$file_R1.gz
+
+	file_path_R2="$(cut -d',' -f3 <<<"$iline")"
+	file_R2=`basename "$file_path_R2"`; file_R2=${file_R2/.gz/}
+	echo $file_R2
+	cp -n $file_path_R2 Data/$file_R2.gz
+done < remaining_pt.txt
+
+while read iline; do
+	file_path_R1="$(cut -d',' -f2 <<<"$iline")"
+	file_R1=`basename "$file_path_R1"`; file_R1=${file_R1/.gz/}
+	echo $file_R1
+	cp -n $file_path_R1 Data/$file_R1.gz
+
+	file_path_R2="$(cut -d',' -f3 <<<"$iline")"
+	file_R2=`basename "$file_path_R2"`; file_R2=${file_R2/.gz/}
+	echo $file_R2
+	cp -n $file_path_R2 Data/$file_R2.gz
+done < remaining_nr.txt
+
+
+## Launch remaining pt
 a=($(wc 'remaining_pt.txt')); Ns_pt=${a[0]}; echo $Ns_pt
-sbatch -p all --array=1-${Ns_pt}%$slurmThrottle ../GetOrg_array.sh remaining_pt.txt
-# Launch remaining nr
+if (( $Ns_pt > 0 )); then
+	sbatch --array=1-${Ns_pt}%$slurmThrottle ../GetOrg_array.sh remaining_pt.txt "pt"
+fi
+
+## Launch remaining nr
 a=($(wc 'remaining_nr.txt')); Ns_nr=${a[0]}; echo $Ns_nr
-sbatch -p all --array=1-${Ns_nr}%$slurmThrottle ../GetOrg_array.sh remaining_nr.txt
+if (( $Ns_nr > 0 )); then
+	sbatch --array=1-${Ns_nr}%$slurmThrottle ../GetOrg_array.sh remaining_nr.txt "nr"
+fi
