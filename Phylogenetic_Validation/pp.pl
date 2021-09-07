@@ -1,5 +1,11 @@
 #!/bin/perl
 
+##################################
+# Author: Paul Kersey
+
+# Copyright © 2020 The Board of Trustees of the Royal Botanic Gardens, Kew
+##################################
+
 # analyse PAFTOL tree and label nodes
 
 # some of the outputs generated include:
@@ -32,6 +38,7 @@ use vars qw($opt_tree
             $opt_tree2 
             $opt_order
             $opt_well
+            $opt_mono
             $opt_help);
             
 use Bio::TreeIO;
@@ -52,6 +59,7 @@ use strict;
             "tree2=s", 
             "order",      
             "well",
+            "mono=s",
             "help");      
 
 ########################################################
@@ -61,7 +69,7 @@ my $USAGE =<<USAGE;
 
      Usage:
 
-         perl pp.pl -tree treefile.nwk [-dup.dup.txt] -good g.txt -alien a.txt -outlier o.txt -specimen s.txt -stats st.txt -tree2 new_treefile.nwk [-bootstrap bs.txt] [-order] [-well] [-help] > output.txt
+         perl pp.pl -tree treefile.nwk [-dup.dup.txt] -good g.txt -bad b.txt -alien a.txt -outlier o.txt -mono mono.txt -specimen s.txt -stats st.txt -tree2 new_treefile.nwk [-bootstrap bs.txt] [-order] [-well] [-help] > output.txt
 
          where:
                 tree=s  Input (unrooted) tree in Newick format
@@ -73,6 +81,7 @@ my $USAGE =<<USAGE;
             specimen=s  List of score for how well each specimen matches to its family
                stats=s  List of taxonomic coherence scores for labelled nodes and associated bootstrap values
            bootstrap=s  List of bootstrap values by position in taxonomy
+                mono=s  Specify this to run an abbreviated version of code to produce monophyly report only
                tree2=s  File to which a simplified (rooted) family-level tree will be written
                  order  Specify this to write a simplified order-level tree instead of a family level tree
                   well  Specify this and specimens will only be considered outliers to well-defined parents
@@ -114,6 +123,8 @@ my $treeio = Bio::TreeIO->new(-format => 'newick',
 my @parents;                        
 my $id;
 my $maxId = 0;
+my $nextId = 0; # for filling in specimen blanks when testing (should not allow in when 
+                # working on release level trees)
 my %term2leaf;
 my %nodeId2term;
 my %nodeId2node;
@@ -190,7 +201,9 @@ if (my $tree = $treeio->next_tree) {
   			$specimen .= 'X';
   		}
   		
-  		$specimen .= $blacklist;
+  		print STDERR $leafId, "*", $specimen if $specimen =~ /Pedicellarum /;
+  		
+  		# $specimen .= $blacklist;
   		
   		## stats on previously blacklisted samples
   		
@@ -234,7 +247,20 @@ if (my $tree = $treeio->next_tree) {
   			}
   		}
   		
-  		print STDERR "Duplicate leaf ID:", $leafId, "\n" if $nodeId2node{$leafId};
+  		if ($opt_mono) {
+  		
+  			# code for use in test to allow analysis to proceed when some leaves are 
+  			# missing IDs
+  		
+  			$leafId = $nextId if $leafId eq '';
+  			$nextId ++;
+  		}
+  		
+  		print STDERR "Duplicate leaf ID:", 
+  		             $leafId, 
+  		             "\t", 
+  		             $description, 
+  		             "\n" if $nodeId2node{$leafId};
   		die if $nodeId2node{$leafId};
   		$leafId .= 'X' if $nodeId2node{$leafId}; 		
   		$maxId = $leafId if $maxId < $leafId;
@@ -270,6 +296,12 @@ if (my $tree = $treeio->next_tree) {
   		${${$taxon2ancestor{'GENUS'}}{$genus}}{'FAMILY'} = $family;
   		${${$taxon2ancestor{'GENUS'}}{$genus}}{'ORDER'} = $order;
   		${${$taxon2ancestor{'FAMILY'}}{$family}}{'ORDER'} = $order;  
+  		
+  		if ($genus eq 'Pedicellarum') {
+  		
+  			print STDERR join "*\t", $specimen, $species, $genus, $family, $order;
+  			print STDERR "\n";
+  		}
     }
     
     print STDERR "Accepted node count: ", scalar keys %nodeId2node, "\n";
@@ -299,8 +331,6 @@ if (my $tree = $treeio->next_tree) {
   			
   		} else {
   		
-  		 my $check;
-  		
   			for my $child ($parent -> each_Descendent) {
   		
   		 		if ($child -> id eq '') {
@@ -314,13 +344,7 @@ if (my $tree = $treeio->next_tree) {
   			}
   		
   			my $text;
-  			$parent -> id($id); # assign an ID for this node
-  			
-  			if ($check == 1) {
-  			
-  				print STDERR $id , "\n";		
-  			}
-  					
+  			$parent -> id($id); # assign an ID for this node	
   			$nodeId2node{$id} = $parent;
   			
   			# transfer child's data to parent
@@ -362,11 +386,7 @@ if (my $tree = $treeio->next_tree) {
   			}
   			
   			$id ++;
-  			
-  			if (defined $parent -> ancestor) {
-  			
-  				unshift @parents, $parent -> ancestor;
-  			}
+  			unshift @parents, $parent -> ancestor if defined $parent -> ancestor;
   		}		
   	}
   	 	
@@ -377,6 +397,8 @@ if (my $tree = $treeio->next_tree) {
   	print join "\t", 'RANK', 'NAME', 'SIZE', 'M/P', 'HEAD NODE MATCH';
     print "\n";
     my %singletons;
+    
+    open (MONO, ">$opt_mono") || die "Could not open $opt_mono\n";
     
 	for my $rank (sort keys %term2leaf) {
 	
@@ -391,16 +413,13 @@ if (my $tree = $treeio->next_tree) {
 			
 			if ($taxonSize >= 2) { 
 								
-				print $rank, "\t", $term, "\t", $taxonSize, "\t";
 				my $lca = $tree->get_lca(-nodes => \@leaves); # find LCA for this term
-				
-				print STDERR $term, "\t", $lca;
 					
 				if ($lca -> id eq '') {
 				
 					# how does this happen?
 					
-					print STDERR "Help!\n";
+					die "Help!\n";
 				}
 			
 				# how many terms does this node map to?  If 1, that term is monophyletic
@@ -411,6 +430,7 @@ if (my $tree = $treeio->next_tree) {
 					print "M";
 					$mono{$rank} ++;
 			 		${${$taxonSize2phylyCount{$rank}}{$taxonSize}}{'M'} ++;
+			 		print MONO $rank, "\t", $term,"\n";
 		
 				} else {
 		
@@ -465,17 +485,13 @@ if (my $tree = $treeio->next_tree) {
 			print STDERR "\n";
 		}
 	}
-
-	# print out summary statistics re monophyly
 	
-	print "\n";
-	print join "\t", 'RANK', 'M', 'P';
-	print "\n";
+	# print out summary statistics re monophyly
 		
 	for my $rank (keys %mono) {
 
-		print join "\t", $rank, $mono{$rank}, $para{$rank};
-		print "\n";
+		print MONO join "\t", $rank, $mono{$rank}, $para{$rank};
+		print MONO "\n";
 	}
 	
 	# print out summary statistics for taxa grouped by size
@@ -598,6 +614,11 @@ if (my $tree = $treeio->next_tree) {
 					
 					${${$term2score{$rank}}{$term}}{$nodeId} = $nodeCoverageByTerm * 
 															   $termCoverageByNode;
+															   
+					if ($term eq 'Pedicellarum') {
+					
+						print STDERR join "\t", $nodeId, $nodeCoverageByTerm, $termCoverageByNode, "\n";
+					}
 					
 					${${$term2nodeCoverageByTerm{$rank}}{$term}}{$nodeId} = 
 						$nodeCoverageByTerm;
@@ -1131,8 +1152,6 @@ if (my $tree = $treeio->next_tree) {
 			
 				for my $descendantNodeId (keys %{$nodeId2descendantId{$nodeId}}) {
 				
-					#print STDERR $descendantNodeId , "\n";
-			
 					if ((! $leafId2specimen{$descendantNodeId}) && 
 				    	(! $recorded{$descendantNodeId}) &&
 				    	(! $barred{$descendantNodeId})) {
@@ -1402,7 +1421,9 @@ if (my $tree = $treeio->next_tree) {
 		
 			push @newTips, @{$reducedTreeReversed{$tip}};
 			
-			print STDERR "Adding from reversed tree ", join " ", @{$reducedTreeReversed{$tip}}, "\n";
+			print STDERR "Adding from reversed tree ", 
+			             join " ", @{$reducedTreeReversed{$tip}}, 
+			             "\n";
 		}
 		
 		push @newTips, $reducedTree{$tip} if $reducedTree{$tip};

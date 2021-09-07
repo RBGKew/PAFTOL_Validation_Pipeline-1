@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+##################################
+# Author: Kevin Leempoel
+
+# Copyright © 2020 The Board of Trustees of the Royal Botanic Gardens, Kew
+##################################
+
 # 
 # # wcvp_taxo
 # wcvp_taxo is a python3 script for matching and resolving scientific names against the WCVP database (https://wcvp.science.kew.org/)

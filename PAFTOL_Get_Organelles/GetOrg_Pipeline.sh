@@ -1,4 +1,11 @@
 #!/bin/bash
+
+##################################
+# Author: Kevin Leempoel
+
+# Copyright © 2020 The Board of Trustees of the Royal Botanic Gardens, Kew
+##################################
+
 module load python/3.7.9
 
 # Only arguments needed are DataSource and paftol_export

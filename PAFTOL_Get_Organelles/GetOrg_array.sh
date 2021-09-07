@@ -6,6 +6,13 @@
 #SBATCH --partition=all
 #SBATCH --mem=80000
 #SBATCH --ntasks=1
+
+##################################
+# Author: Kevin Leempoel
+
+# Copyright © 2020 The Board of Trustees of the Royal Botanic Gardens, Kew
+##################################
+
 ncpu=4
 
 module load python/3.7.9

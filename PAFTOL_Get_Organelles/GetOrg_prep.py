@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+##################################
+# Author: Kevin Leempoel
+
+# Copyright © 2020 The Board of Trustees of the Royal Botanic Gardens, Kew
+##################################
+
 # In[1]:
 
 

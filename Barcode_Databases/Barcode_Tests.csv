@@ -1,0 +1,9 @@
+﻿Barcode,min_len,min_cov,type
+BOLD_rbcLa,0,80,cpDNA
+BOLD_rbcL,0,80,cpDNA
+BOLD_matK,0,80,cpDNA
+BOLD_ITS2,0,80,rDNA
+NCBI_23s,0,80,cpDNA
+NCBI_16s,0,80,cpDNA
+NCBI_18s,0,80,rDNA
+Refseq_pt,1000,0,cpDNA

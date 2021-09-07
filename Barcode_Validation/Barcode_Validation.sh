@@ -6,8 +6,14 @@
 #SBATCH --ntasks=1
 #SBATCH --mem=4000
 
+##################################
+# Author: Kevin Leempoel
+
+# Copyright © 2020 The Board of Trustees of the Royal Botanic Gardens, Kew
+##################################
+
 ### Command ###
-# sbatch Barcode_Validation.sh 2021-07-05_paftol_export.csv 'OneKP'
+# ./Barcode_Validation.sh 2021-07-27_paftol_export.csv 'OneKP'
 
 source activate py36
 slurmThrottle=10
@@ -25,6 +31,7 @@ then
 type="pt_nr"
 else
   echo "ERROR, invalid datasource $DataSource"
+  exit 0
 fi
 
 ### Directories
@@ -39,7 +46,5 @@ python Make_samples_list.py --db $paftol_export --DataSource $DataSource
 Nsamples=($(wc -l $DataSource/'Samples_to_barcode.txt'))
 echo "blast $Nsamples samples on barcode databases" 
 if (( $Nsamples > 0 )); then
-	sbatch --wait -p short --array=1-${Nsamples}%$slurmThrottle Blast_on_barcodes.sh $DataSource $type
+	sbatch -p short --array=1-${Nsamples}%$slurmThrottle Blast_on_barcodes.sh $DataSource $type
 fi
-
-python Get_validation_cards.py --samples_table $DataSource/"$DataSource"_samples.csv --barcodes_table Barcode_DB/Barcode_Tests.csv

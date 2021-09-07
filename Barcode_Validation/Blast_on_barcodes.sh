@@ -5,17 +5,22 @@
 #SBATCH --partition=short
 #SBATCH --ntasks=1
 #SBATCH --mem=8000
+
+##################################
+# Author: Kevin Leempoel
+
+# Copyright © 2020 The Board of Trustees of the Royal Botanic Gardens, Kew
+##################################
 ncpu=4
 
 project_dir=$1
 type=$2
 cd $project_dir
 
+barcodes_table=../Barcode_DB/Barcode_Tests.csv
 Samples_file=Samples_to_barcode.txt
-iline=$(sed -n "$SLURM_ARRAY_TASK_ID"p $Samples_file)
-echo $iline
-sample="$(cut -d',' -f1 <<<"$iline")"
-
+# sample=$(sed -n "$SLURM_ARRAY_TASK_ID"p $Samples_file)
+sample=$(sed -n 1p $Samples_file)
 
 if [ $type == contigs ] 
 then
@@ -27,45 +32,28 @@ then
 	fasta_nr_file=fasta_nr/"$sample"_nr.fasta
 fi
 
-echo "$sample"
-echo "$fasta_pt_file"
-echo "$fasta_nr_file"
+echo "sample:$sample,pt_fasta:$fasta_pt_file,nr_fasta:$fasta_nr_file"
 
-     
-if [ -f $fasta_nr_file ]; then
-	for idb in NCBI_pln_18s;
-	do
-		echo $idb
+sed 1d $barcodes_table | while read iline; do
+	idb="$(cut -d',' -f1 <<<"$iline")"
+	type="$(cut -d',' -f4 <<<"$iline")"
+	max_blast="$(cut -d',' -f5 <<<"$iline")"
+	blast_pid="$(cut -d',' -f6 <<<"$iline")"
+	echo "Barcode Test:$idb,type:$type,blast_max_matches:$max_blast,blast_min_pid:$blast_pid"
+	
+	if [ $type == nr ] && [ -f $fasta_nr_file ]; then
 		blastn  -query $fasta_nr_file -db ../Barcode_DB/"$idb".fasta \
-		-perc_identity 95 -outfmt "6 qseqid sseqid pident length slen qlen mismatch gapopen qstart qend sstart send evalue bitscore" \
-		-num_threads $ncpu -max_target_seqs 2000 \
-		-out out_blast/"$sample"-"$idb".out
-	done
-
-else
-   echo "File $fasta_nr_file does not exist."
-fi
-
-if [ -f $fasta_pt_file ]; then
-
-for idb in NCBI_pln_trnL NCBI_pln_trnH BOLD_pln_rbcLa BOLD_pln_matK;
-do
-	echo $idb
-	blastn  -query $fasta_pt_file -db ../Barcode_DB/"$idb".fasta \
-	-perc_identity 95 -outfmt "6 qseqid sseqid pident length slen qlen mismatch gapopen qstart qend sstart send evalue bitscore" \
-	-num_threads $ncpu -max_target_seqs 2000 \
-	-out out_blast/"$sample"-"$idb".out
+			-perc_identity $blast_pid -outfmt "6 qseqid sseqid pident length slen qlen mismatch gapopen qstart qend sstart send evalue bitscore" \
+			-num_threads $ncpu -max_target_seqs $max_blast \
+			-out out_blast/"$sample"-"$idb".out
+	elif [ $type == pt ] && [ -f $fasta_pt_file ]; then
+		blastn  -query $fasta_pt_file -db ../Barcode_DB/"$idb".fasta \
+			-perc_identity $blast_pid -outfmt "6 qseqid sseqid pident length slen qlen mismatch gapopen qstart qend sstart send evalue bitscore" \
+			-num_threads $ncpu -max_target_seqs $max_blast \
+			-out out_blast/"$sample"-"$idb".out
+	else
+	  echo "ERROR $idb, invalid type or no fasta file"
+	fi
 done
 
-for idb in NCBI_pln_plastome;
-do
-	echo $idb
-	blastn  -query $fasta_pt_file -db ../Barcode_DB/"$idb".fasta \
-	-perc_identity 95 -outfmt "6 qseqid sseqid pident length slen qlen mismatch gapopen qstart qend sstart send evalue bitscore" \
-	-num_threads $ncpu -max_target_seqs 500 \
-	-out out_blast/"$sample"-"$idb".out
-done
-
-else
-   echo "File $fasta_pt_file does not exist."
-fi
+python ../Get_validation_cards.py --sample $sample --samples_file "$project_dir"_samples.csv --barcodes_table $barcodes_table

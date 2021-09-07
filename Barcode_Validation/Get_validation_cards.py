@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[80]:
+##################################
+# Author: Kevin Leempoel
+
+# Copyright © 2020 The Board of Trustees of the Royal Botanic Gardens, Kew
+##################################
+
+# In[65]:
 
 
 import pandas as pd
@@ -15,48 +21,45 @@ warnings.filterwarnings('ignore')
 
 # ## Parameters
 
-# In[81]:
+# In[66]:
 
 
 ## Parameters
 parser = argparse.ArgumentParser(
     description='Blast sample sequences on Barcode database and process the results')
-parser.add_argument("--samples_table", type=str, help="samples and their taxonomy at tested taxonomic levels")
+parser.add_argument("--samples_file", type=str, help="spreadsheet of samples with their taxonomy")
+parser.add_argument("--sample", type=str, help="sample for which a barcode validation will be produced")
 parser.add_argument("--barcodes_table", type=str, help="spreadsheet of barcode tests with parameters")
 args = parser.parse_args()
 
-samples_file = args.samples_table
+samples_file = args.samples_file
+sample = args.sample
 barcode_tests_file = args.barcodes_table
 
 
-# In[82]:
+# In[67]:
 
 
 # ## Test in Notebook
-# samples_file = 'OneKP/OneKP_samples.csv'
-# barcode_tests_file = 'Barcode_DB/Barcode_Tests.csv'
+# # os.chdir('PAFTOL/')
+# samples_file = 'PAFTOL_samples.csv'
+# sample = 'PAFTOL_007573'
+# barcode_tests_file = '../Barcode_DB/Barcode_Tests.csv'
 
 
-# In[83]:
+# In[68]:
 
 
 barcode_DB_dir = os.path.split(barcode_tests_file)[0] +'/'
-wdir = os.path.split(samples_file)[0] +'/'
-col_taxo_db=['SeqID','species','genus','family']
+col_taxo_db=['Locus','species','genus','family']
 taxo_ranks=['genus','family']
-val_col_order = ['Test','tax_level','taxo','Blast','Nmatch','taxo_in_db','match','rank_pid','rank_bsc','pid','len','scov','qcov',
+val_col_order = ['Test','tax_level','taxo','taxo_in_db','Blast','Nmatch','match','rank_pid','rank_bsc','pid','len','scov','qcov',
                  'best','best_pid','best_score','best_scov','best_qcov','NseqID']
-
-
-# In[ ]:
-
-
-
 
 
 # ## Functions
 
-# In[84]:
+# In[69]:
 
 
 def clean_sseqid(col_sseqid):
@@ -72,7 +75,7 @@ def clean_sseqid(col_sseqid):
 # print(clean_sseqid(col_sseqid=tmp.test))
 
 
-# In[85]:
+# In[70]:
 
 
 # Load blast output
@@ -83,8 +86,8 @@ def load_blast_file(blastpath):
             blast_df.columns=['qseqid', 'sseqid', 'pident', 'length', 'slen', 'qlen', 'mismatch', 'gapopen', 'qstart', 
                               'qend', 'sstart', 'send', 'evalue', 'bitscore']
             blast_df.pident = blast_df.pident.round(2)
-            blast_df['scov']=round(blast_df.length/blast_df.slen*100,1)
-            blast_df['qcov']=round(blast_df.length/blast_df.qlen*100,1)
+            blast_df['scov']=round( (abs(blast_df.sstart-blast_df.send) +1) / blast_df.slen*100,1)
+            blast_df['qcov']=round( (abs(blast_df.qstart-blast_df.qend) +1) / blast_df.qlen*100,1)
             blast_df = blast_df[['qseqid', 'sseqid','length', 'slen', 'qlen','scov','qcov','pident','evalue', 'bitscore']]      
         else:
             return None
@@ -93,20 +96,7 @@ def load_blast_file(blastpath):
     return blast_df
 
 
-# In[86]:
-
-
-# Load samples
-def load_smpl(smpl_path):
-    samples_df=pd.read_csv(smpl_path)
-    if ('Sample' not in samples_df.columns):
-        print('Could not find sample column. Will read it again as without header and name               first column Sample')
-        samples_df=pd.read_csv(smpl_path,header=None).rename(columns={0:'Sample'})
-    return samples_df
-# samples_df = load_smpl(smpl_path = project_folder + '/' + samples_df_filename)
-
-
-# In[87]:
+# In[71]:
 
 
 # Filter blast output
@@ -117,7 +107,7 @@ def filter_blast(blast_filt_df, filter_dict):
     return blast_filt_df
 
 
-# In[88]:
+# In[72]:
 
 
 def get_blast_results(validic, blast_sample):
@@ -149,7 +139,7 @@ def get_blast_results(validic, blast_sample):
     return validic
 
 
-# In[89]:
+# In[73]:
 
 
 def load_taxo_db(genes_df):
@@ -157,7 +147,7 @@ def load_taxo_db(genes_df):
     for gene_idx, gene_row in genes_df.iterrows():
         ## Load db_taxo
         taxo_db = pd.read_csv(barcode_DB_dir + gene_row.Barcode + '_TAXO.csv')
-        taxo_db = taxo_db[col_taxo_db]; taxo_db['SeqID']= taxo_db['SeqID'].astype('str')
+        taxo_db = taxo_db[col_taxo_db]; taxo_db['Locus']= taxo_db['Locus'].astype('str')
         taxo_db['Barcode'] = gene_row.Barcode
         all_taxo_db = pd.concat([all_taxo_db,taxo_db],ignore_index=True)
         del taxo_db
@@ -166,83 +156,92 @@ def load_taxo_db(genes_df):
 
 # ## Main
 
-# In[92]:
+# In[74]:
+
+
+samples_df = pd.read_csv(samples_file)
+sample_dic = samples_df[samples_df.Sample==sample].to_dict(orient='records')[0]
+sample_dic['genus']
+
+
+# In[75]:
 
 
 if __name__ == "__main__":
     ## Load data
     genes_df = pd.read_csv(barcode_tests_file)
-    samples_df = load_smpl(smpl_path = samples_file)
-    print('\n\nProcessing blast output for',genes_df.shape[0],'barcode tests and',samples_df.shape[0],'samples')
+    samples_df = pd.read_csv(samples_file)
+    # Convert sample info (taxonomy) as a dictionary
+    sample_dic = samples_df[samples_df.Sample==sample].to_dict(orient='records')[0]
+    print('\n\nProcessing blast output for',genes_df.shape[0],'barcode tests')
     print(genes_df)
-    
-    # For each sample,
-    for idx, row in tqdm(samples_df.iterrows(), total=samples_df.shape[0]):
-        # Don't run sample's validation if it already exists
-        validation_file = wdir + 'Barcode_Validation/BV_' + row.Sample + '.csv'
-        if os.path.exists(validation_file)==False:
-            results_blast_df = pd.DataFrame()
-            ## Load all db_taxo
-            all_taxo_db = load_taxo_db(genes_df)
-            # For each gene,
-            for gene_idx, gene_row in genes_df.iterrows():
-                ## barcode db_taxo
-                taxo_db = all_taxo_db[all_taxo_db.Barcode==gene_row.Barcode].reset_index(drop=True)
-                ## Get blast output
-                raw_blast=load_blast_file(blastpath = wdir + 'out_blast/' + row.Sample + '-' + gene_row.Barcode + '.out')
-                # If data, filter blast
+
+    # Don't run sample's validation if it already exists
+    validation_file = 'Barcode_Validation/BV_' + sample + '.csv'
+    results_blast_df = pd.DataFrame()
+    ## Load all db_taxo
+    all_taxo_db = load_taxo_db(genes_df)
+    # For each gene,
+    for gene_idx, gene_row in genes_df.iterrows():
+        # barcode db_taxo
+        taxo_db = all_taxo_db[all_taxo_db.Barcode==gene_row.Barcode].reset_index(drop=True)
+        # For each taxonomic level (genus, family)
+        for itax in taxo_ranks:
+            validic = {'Test':gene_row.Barcode, 'tax_level': itax, 'taxo': sample_dic[itax]}
+            
+            ## If taxo in DB
+            if validic['taxo'] in list(taxo_db[itax]):
+                validic['taxo_in_db'] = True
+                
+                # Get blast output
+                raw_blast=load_blast_file(blastpath = 'out_blast/' + sample + '-' + gene_row.Barcode + '.out')
+                
+                ## If blast output, filter it
                 if isinstance(raw_blast,type(None))==False:
+                    validic['Blast'] = True
                     filter_dict={'min_pident':gene_row.blast_pid,'min_length':gene_row.min_len,'min_scov':gene_row.min_cov}
                     blast_filt_df=filter_blast(raw_blast, filter_dict)
                     blast_filt_df['sseqid']= blast_filt_df['sseqid'].astype('str')
-
+                    
+                    ## If match after filtering, get validation results
                     if blast_filt_df.shape[0]>0:
+                        validic['Nmatch'] = blast_filt_df.shape[0]
                         
                         # Clean sseqid by recovering the element within |
                         blast_filt_df['sseqid']=clean_sseqid(col_sseqid=blast_filt_df['sseqid'])
                         # Make subset to speed up merging
-                        taxo_db_subset = taxo_db[taxo_db.SeqID.isin(blast_filt_df.sseqid)]
+                        taxo_db_subset = taxo_db[taxo_db.Locus.isin(blast_filt_df.sseqid)]
                         blast_taxo = pd.merge(left=blast_filt_df,right=taxo_db_subset,
-                                              how='left',left_on='sseqid',right_on='SeqID')
+                                              how='left',left_on='sseqid',right_on='Locus')
                         #Sort values and Reset index
                         blast_taxo = blast_taxo.sort_values('pident',ascending=False).reset_index(drop=True)
                         #Reducing length of qseqid
                         blast_taxo['qseqid']=blast_taxo['qseqid'].str.slice(0,12)
-                        if blast_taxo.SeqID.isna().sum()>0:
-                            print('WARNING:',blast_taxo.SeqID.isna().sum(),
-                                  'have no match between sseqid and SeqID')
-                            print(blast_taxo[blast_taxo.SeqID.isna()]['sseqid'])
-
-                        ## Get Validation data for each barcode x taxonomic rank
-                        for itax in taxo_ranks:
-                            validic = {'Test':gene_row.Barcode, 'tax_level': itax, 'taxo': row[itax], 
-                                       'Blast':True, 'Nmatch': blast_taxo.shape[0]}
-                            # Check if in DB
-                            if row[itax] in list(taxo_db[itax]):
-                                validic['taxo_in_db'] = True
-                                # Get validation results
-                                validic = get_blast_results(validic = validic, blast_sample = blast_taxo)
-                            elif row[itax] not in list(taxo_db[itax]):
-                                validic['taxo_in_db'] = False
-                            results_blast_df = pd.concat([results_blast_df, 
-                                                          pd.DataFrame.from_dict(validic,orient='index').transpose()])
-                    else:
-                        for itax in taxo_ranks:
-                            validic = {'Test':gene_row.Barcode, 'tax_level': itax, 'taxo': row[itax], 
-                                       'Blast':True, 'Nmatch': 0}
-                            results_blast_df = pd.concat([results_blast_df, 
-                                                          pd.DataFrame.from_dict(validic,orient='index').transpose()])
-                else:
-                    for itax in taxo_ranks:
-                            validic = {'Test':gene_row.Barcode, 'tax_level': itax, 'taxo': row[itax], 
-                                       'Blast':False}
-                            results_blast_df = pd.concat([results_blast_df, 
-                                                          pd.DataFrame.from_dict(validic,orient='index').transpose()])
+                        if blast_taxo.Locus.isna().sum()>0:
+                            print('WARNING:',blast_taxo.Locus.isna().sum(),
+                                  'matches are missing their taxonomy', gene_row.Barcode, itax)
+                            print(blast_taxo[blast_taxo.Locus.isna()]['sseqid'].to_dict())
                             
-            # Write Output if at least one blast file was found
-            if results_blast_df.Blast.sum()>0:
-                tmp_val_col = [icol for icol in val_col_order if icol in results_blast_df.columns]
-                results_blast_df[tmp_val_col].to_csv(validation_file,index=False)
-            else:
-                print('No Blast files found for',row.Sample)
+                        validic = get_blast_results(validic = validic, blast_sample = blast_taxo)
+                        
+                    ## If NO match after filtering
+                    else:
+                        validic['Nmatch'] = 0
+                        
+                ## If NO blast output
+                else:
+                    validic['Blast'] = False      
+                    
+            ## If taxo NOT in DB        
+            elif validic['taxo'] not in list(taxo_db[itax]):
+                validic['taxo_in_db'] = False
+                
+            results_blast_df = pd.concat([results_blast_df, pd.DataFrame.from_dict(validic,orient='index').transpose()])
+
+    # Write Output if at least one blast file was found
+    if results_blast_df.Blast.sum()>0:
+        tmp_val_col = [icol for icol in val_col_order if icol in results_blast_df.columns]
+        results_blast_df[tmp_val_col].to_csv(validation_file,index=False)
+    else:
+        print('No Blast files found for',sample)
 
