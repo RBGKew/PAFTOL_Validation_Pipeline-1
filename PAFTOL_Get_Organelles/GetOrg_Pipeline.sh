@@ -1,19 +1,12 @@
 #!/bin/bash
-
-##################################
-# Author: Kevin Leempoel
-
-# Copyright © 2020 The Board of Trustees of the Royal Botanic Gardens, Kew
-##################################
-
-module load python/3.7.9
+module load python/3
 
 # Only arguments needed are DataSource and paftol_export
-# e.g: ./GetOrg_Pipeline.sh "GAP" 2021-07-27_paftol_export.csv
-DataSource=$1
-paftol_export=$2
-rem_search="log"
-slurmThrottle=2
+# e.g: ./GetOrg_Pipeline.sh 2021-07-27_paftol_export.csv "PAFTOL"
+DataSource=$2
+paftol_export=$1
+rem_search="fasta" # log or fasta
+slurmThrottle=5
 
 
 ## Make lists of remaining  samples that have no organelles recovered
@@ -24,8 +17,7 @@ python GetOrg_prep.py --db $paftol_export --DataSource $DataSource --rem_search 
 
 ## Go to dir and create working directories
 cd $DataSource
-mkdir -p tmp_fastq_pt; mkdir -p tmp_fastq_nr; mkdir -p GetOrg;
-mkdir -p logs; mkdir -p fasta_pt; mkdir -p fasta_nr; mkdir -p Archives;
+mkdir -p GetOrg; mkdir -p logs; mkdir -p fasta_pt; mkdir -p fasta_nr; mkdir -p Archives;
 
 
 ## Copy .fastq.gz files in currrent Data directory
@@ -37,9 +29,13 @@ while read iline; do
 	cp -n $file_path_R1 Data/$file_R1.gz
 
 	file_path_R2="$(cut -d',' -f3 <<<"$iline")"
-	file_R2=`basename "$file_path_R2"`; file_R2=${file_R2/.gz/}
-	echo $file_R2
-	cp -n $file_path_R2 Data/$file_R2.gz
+	if [ ! -z "$file_path_R2" ]; then
+		file_R2=`basename "$file_path_R2"`; file_R2=${file_R2/.gz/}
+		echo $file_R2
+		cp -n $file_path_R2 Data/$file_R2.gz
+	else
+		echo "No R2"
+	fi
 done < remaining_pt.txt
 
 while read iline; do
@@ -49,9 +45,13 @@ while read iline; do
 	cp -n $file_path_R1 Data/$file_R1.gz
 
 	file_path_R2="$(cut -d',' -f3 <<<"$iline")"
-	file_R2=`basename "$file_path_R2"`; file_R2=${file_R2/.gz/}
-	echo $file_R2
-	cp -n $file_path_R2 Data/$file_R2.gz
+	if [ ! -z "$file_path_R2" ]; then
+		file_R2=`basename "$file_path_R2"`; file_R2=${file_R2/.gz/}
+		echo $file_R2
+		cp -n $file_path_R2 Data/$file_R2.gz
+	else
+		echo "No R2"
+	fi
 done < remaining_nr.txt
 
 
