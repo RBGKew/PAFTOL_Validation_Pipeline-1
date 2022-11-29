@@ -174,6 +174,14 @@ def load_wcvp(wcvp_path):
         wcvp = pd.read_pickle(wcvp_path.replace('.txt','.pkl'))
     elif os.path.exists(wcvp_path):
         wcvp = pd.read_table(wcvp_path,sep='|',encoding='utf-8')
+        
+        # Rename fields (new dump Nov. 2022)
+        wcvp = wcvp.rename(columns = {'powo_id':'kew_id','taxon_status':'taxonomic_status', 'parenthetical_author':'parent_authors','accepted_powo_id':'accepted_kew_id','parent_powo_id':'parent_kew_id'})
+        wcvp['parent_name'] = 'parent_name_test'
+        wcvp['accepted_name'] = 'accepted_name_test'
+        wcvp['accepted_authors'] = 'accepted_authors_test'
+        print(wcvp.columns)
+
         print('found .txt, ',end='')
         # Remove extra columns
         wcvp = wcvp.drop(columns=['parent_kew_id','parent_name','parent_authors'])
